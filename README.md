@@ -21,7 +21,17 @@ View your TypeRacer historical stats — speed, accuracy, points, and daily acti
 - Node.js 18+
 - npm
 
-### Installation
+### Live Demo
+
+A static demo of the UI is available on **GitHub Pages**:
+[https://sirmastermind1379.github.io/typeracer-stats](https://sirmastermind1379.github.io/typeracer-stats)
+
+> **Note:** The static demo shows the frontend only. Data fetching requires a running server.
+> For the full experience, deploy to [Vercel](https://vercel.com/) (free, one-click, fully functional).
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSirMasterMind1379%2Ftyperacer-stats)
+
+## Installation
 
 ```bash
 git clone https://github.com/SirMasterMind1379/typeracer-stats.git

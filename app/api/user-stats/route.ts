@@ -25,7 +25,7 @@ async function scrapeProfile(username: string) {
     const res = await fetch(`https://data.typeracer.com/pit/profile?user=${username}`);
     const html = await res.text();
 
-    const stats: any = { totalRaces: 0, totalWins: 0, avgWpm: null, bestWpm: null };
+    const stats: any = { totalRaces: 0, avgWpm: null, bestWpm: null, typistLevel: null };
 
     const avgMatch = html.match(/Stat__Top">([\d.]+)\s*WPM<\/span>(?:(?!Stat__Top)[\s\S])*?Stat__Btm">Full Avg\./i);
     if (avgMatch) stats.avgWpm = parseFloat(avgMatch[1]);
@@ -36,12 +36,16 @@ async function scrapeProfile(username: string) {
     const racesMatch = html.match(/Stat__Top">(\d+)<\/span>(?:(?!Stat__Top)[\s\S])*?Stat__Btm">Races/i);
     if (racesMatch) stats.totalRaces = parseInt(racesMatch[1]);
 
+    const typistMatch = html.match(/Stat__Top">([^<]+)<\/span>(?:(?!Stat__Top)[\s\S])*?Stat__Btm">Exp Level/i);
+    if (typistMatch) stats.typistLevel = typistMatch[1].trim();
+
     const nameMatch = html.match(/<title>([^(<]+)\s*\(/);
     const name = nameMatch ? nameMatch[1].trim() : username;
 
-    const premium = html.includes('PREMIUM') || html.includes('Premium');
+    const premium = html.includes('Plan__Premium') && !html.includes('Plan__Basic');
+    const badges = [...new Set([...html.matchAll(/data-badge="([^"]+)"/g)].map((m) => m[1]))];
 
-    return { name, stats, premium };
+    return { name, stats, premium, badges };
   } catch {
     return null;
   }
@@ -68,6 +72,7 @@ export async function POST(request: Request) {
         name: profile.name,
         joinedAt: null,
         premium: profile.premium,
+        badges: profile.badges,
         stats: profile.stats,
         races: [],
         qotdDone: false,
@@ -99,6 +104,7 @@ export async function POST(request: Request) {
         name: profile.name,
         joinedAt: null,
         premium: profile.premium,
+        badges: profile.badges,
         stats: profile.stats,
         races: [],
         qotdDone: false,
@@ -150,6 +156,7 @@ export async function POST(request: Request) {
       name: racer?.name || username,
       joinedAt: racer?.joined_at || null,
       premium: racer?.premium || false,
+      badges: racer?.badges || [],
       stats: stats
         ? {
             totalRaces: stats.total_races,

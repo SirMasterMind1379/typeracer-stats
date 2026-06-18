@@ -5,4 +5,46 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Beige palette */
+  --color-beige-50: #FFFDF5;
+  --color-beige-100: #FFF8E7;
+  --color-beige-200: #F5E6CC;
+  --color-beige-300: #E8D5B0;
+  --color-beige-400: #D4C4A0;
+  --color-beige-500: #C0B090;
+  --color-beige-600: #A09070;
+  --color-beige-700: #807050;
+  --color-beige-800: #605040;
+  --color-beige-900: #403830;
+
+  /* Royal red accents */
+  --color-red-950: #7A0000;
+  --color-red-900: #8B0000;
+  --color-red-800: #A00000;
+  --color-red-700: #B22222;
+  --color-red-600: #C62828;
+  --color-red-500: #DC143C;
+  --color-red-400: #E84949;
+}
+
+/* Base styles */
+body {
+  background-color: var(--color-beige-100);
+  color: var(--color-beige-900);
+}
+
+.dark body {
+  background-color: #1C1917;
+  color: #F5F5F0;
+}
+
+/* Pulsing squares loader */
+@keyframes pulse-square {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.animate-pulse-square {
+  animation: pulse-square 1s ease-in-out infinite;
 }

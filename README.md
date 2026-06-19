@@ -113,14 +113,7 @@ npm start
 
 ## Future Considerations
 
-- **Multi-universe support** — allow selecting different TypeRacer universes (play, comp, etc.)
-- **Compare profiles** — side-by-side comparison of two or more racers
-- **Race replay** — integrate keyboard heatmap / per-key analysis from keylog data
-- **Export charts** — download chart as PNG/SVG for sharing
-- **Leaderboard integration** — see where you rank among friends or globally
 - **Session grouping** — group races into sessions by time gaps for per-session stats
-- **Performance regression** — track WPM against text difficulty (text ID correlation)
-- **Progressive Web App** — offline support via service worker for cached imports
 
 ## Tech Stack
 
@@ -131,6 +124,7 @@ npm start
 - [Lucide Icons](https://lucide.dev/)
 - [PapaParse](https://www.papaparse.com/) — CSV parsing
 - [JSZip](https://stuk.github.io/jszip/) — ZIP extraction
+- [html2canvas](https://html2canvas.hertzen.com/) — chart / heatmap PNG export
 
 ## License
 

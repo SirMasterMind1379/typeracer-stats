@@ -10,6 +10,7 @@ import Chart from "./components/Chart";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 import ErrorBanner from "./components/ErrorBanner";
 import DataImport from "./components/DataImport";
+import ExportButton from "./components/ExportButton";
 import type { UserData, Race, Metric, TimeframeStats as TStats } from "./components/types";
 
 const WINDOW = 100;
@@ -453,7 +454,7 @@ export default function Home() {
 
                 <TimeframeStats stats={timeframeStats} />
 
-                <div className="bg-beige-50 dark:bg-zinc-900 border border-beige-300 dark:border-zinc-700 p-4">
+                <div id="chart-export" className="bg-beige-50 dark:bg-zinc-900 border border-beige-300 dark:border-zinc-700 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-beige-700 dark:text-zinc-400 uppercase tracking-wide">
                       {selectedMetric === "speed"
@@ -465,13 +466,16 @@ export default function Home() {
                         : "Wins"}{" "}
                       Over Time
                     </h3>
-                    {regression && (
-                      <span className="text-xs font-mono text-beige-600 dark:text-zinc-500">
-                        Trend: {regression.slope > 0 ? "+" : ""}
-                        {regression.slope.toFixed(4)} per race (
-                        {(regression.slope * 100).toFixed(2)} per 100 races)
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {regression && (
+                        <span className="text-xs font-mono text-beige-600 dark:text-zinc-500">
+                          Trend: {regression.slope > 0 ? "+" : ""}
+                          {regression.slope.toFixed(4)} per race (
+                          {(regression.slope * 100).toFixed(2)} per 100 races)
+                        </span>
+                      )}
+                      <ExportButton targetId="chart-export" filename="typeracer-chart.png" />
+                    </div>
                   </div>
                   <Chart
                     data={chartDataWithRegression}
@@ -495,10 +499,13 @@ export default function Home() {
                 </div>
 
                 {useDateLabels && dataSource === "api" && (
-                  <div className="bg-beige-50 dark:bg-zinc-900 border border-beige-300 dark:border-zinc-700 p-4">
-                    <h3 className="text-sm font-semibold mb-3 text-beige-700 dark:text-zinc-400 uppercase tracking-wide">
-                      Daily Activity
-                    </h3>
+                  <div id="heatmap-export" className="bg-beige-50 dark:bg-zinc-900 border border-beige-300 dark:border-zinc-700 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-beige-700 dark:text-zinc-400 uppercase tracking-wide">
+                        Daily Activity
+                      </h3>
+                      <ExportButton targetId="heatmap-export" filename="typeracer-heatmap.png" />
+                    </div>
                     <ActivityHeatmap races={data.races} dark={dark} />
                     <div className="flex items-center justify-end gap-1 mt-2 text-[10px] text-beige-600 dark:text-zinc-500">
                       <span>Less</span>

@@ -47,6 +47,7 @@ function niceAxisConfig(min: number, max: number, cap?: number) {
 export default function Home() {
   /* ── form state ──────────────────────────────────────────── */
   const [input, setInput] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [data, setData] = useState<UserData | null>(null);
   const [dataSource, setDataSource] = useState<"api" | "import" | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,7 +94,7 @@ export default function Home() {
 
   /* ── form submission ─────────────────────────────────────── */
   const handleSubmit = useCallback(
-    async (apiKey: string) => {
+    async () => {
       setLoading(true);
       setError("");
       setRefAreaLeft(null);
@@ -114,8 +115,9 @@ export default function Home() {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
         const body: Record<string, string> = { username };
-        if (apiKey.trim()) {
-          body.apiKey = apiKey.trim();
+        const key = apiKey.trim();
+        if (key) {
+          body.apiKey = key;
           body.apiUsername = username;
         }
         const res = await fetch("/api/user-stats", {
@@ -137,6 +139,9 @@ export default function Home() {
         result.races = filtered;
         setData(result);
         setDataSource("api");
+        if (result.username && result.username !== username) {
+          setInput(result.username);
+        }
       } catch (err: any) {
         if (err.name === "AbortError") {
           setError("Request timed out. Server may be restarting.");
@@ -147,7 +152,7 @@ export default function Home() {
         setLoading(false);
       }
     },
-    [input],
+    [input, apiKey],
   );
 
   /* ── import handler ──────────────────────────────────────── */
@@ -160,6 +165,7 @@ export default function Home() {
     setRefAreaLeft(null);
     setRefAreaRight(null);
     setZoomBounds(null);
+    setInput(username);
 
     const filtered = races.filter((r) => (r.totalRacers ?? 0) > 1 || (r.mode && !r.mode.toLowerCase().includes("qotd")));
     const sorted = [...filtered].sort((a, b) => {
@@ -194,6 +200,7 @@ export default function Home() {
     setData(null);
     setDataSource(null);
     setInput("");
+    setApiKey("");
     setError("");
     setRefAreaLeft(null);
     setRefAreaRight(null);
@@ -353,7 +360,9 @@ export default function Home() {
           <div className="flex-1">
             <SearchForm
               value={input}
+              apiKey={apiKey}
               onChange={setInput}
+              onApiKeyChange={setApiKey}
               onSubmit={handleSubmit}
               loading={loading}
             />
@@ -377,7 +386,7 @@ export default function Home() {
         {data && (
           <>
             <div ref={profileRef}>
-              <UserProfile data={data} />
+              <UserProfile data={data} dataSource={dataSource} />
             </div>
             <StatsCards data={data} />
 

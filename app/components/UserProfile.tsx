@@ -7,7 +7,7 @@ import type { UserData } from "./types";
  *
  * @param data - Full user payload from the API.
  */
-export default function UserProfile({ data }: { data: UserData }) {
+export default function UserProfile({ data, dataSource }: { data: UserData; dataSource: "api" | "import" | null }) {
   const profileUrl = `https://data.typeracer.com/pit/profile?user=${data.username}`;
 
   /** Consecutive days with any race, ending today. */
@@ -184,19 +184,20 @@ export default function UserProfile({ data }: { data: UserData }) {
         )}
       </div>
 
-      {/* QOTD badge (clickable) */}
-      <a
-        href="https://play.typeracer.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`px-3 py-1.5 text-sm font-medium border inline-block ${
-          data.qotdDone
-            ? "bg-red-50 dark:bg-red-950 border-red-700 text-red-800 dark:text-red-200"
-            : "bg-beige-50 dark:bg-zinc-800 border-beige-300 dark:border-zinc-600 text-beige-700 dark:text-zinc-400"
-        }`}
-      >
-        QOTD: {data.qotdDone ? "Done" : "Not Done"}
-      </a>
+      {dataSource === "api" && (
+        <a
+          href="https://play.typeracer.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`px-3 py-1.5 text-sm font-medium border inline-block ${
+            data.qotdDone
+              ? "bg-red-50 dark:bg-red-950 border-red-700 text-red-800 dark:text-red-200"
+              : "bg-beige-50 dark:bg-zinc-800 border-beige-300 dark:border-zinc-600 text-beige-700 dark:text-zinc-400"
+          }`}
+        >
+          QOTD: {data.qotdDone ? "Done" : "Not Done"}
+        </a>
+      )}
     </div>
   );
 }

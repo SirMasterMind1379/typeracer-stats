@@ -1,34 +1,27 @@
 import { useState } from "react";
 import { Key, Eye, EyeOff } from "lucide-react";
 
-/**
- * SearchForm — username / profile-link input with optional API key field.
- *
- * Props mirror the parent state so the parent controls submission.
- *
- * @param value     - Current username input value.
- * @param onChange  - Called when the user types in the username field.
- * @param onSubmit  - Called when the form is submitted.
- * @param loading   - Whether a request is in flight.
- */
 export default function SearchForm({
   value,
+  apiKey,
   onChange,
+  onApiKeyChange,
   onSubmit,
   loading,
 }: {
   value: string;
+  apiKey: string;
   onChange: (v: string) => void;
-  onSubmit: (apiKey: string) => void;
+  onApiKeyChange: (v: string) => void;
+  onSubmit: () => void;
   loading: boolean;
 }) {
-  const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [showField, setShowField] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(apiKey);
+    onSubmit();
   };
 
   return (
@@ -77,7 +70,7 @@ export default function SearchForm({
           <input
             type={showKey ? "text" : "password"}
             value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
+            onChange={(e) => onApiKeyChange(e.target.value)}
             placeholder="Your TypeRacer API key..."
             className="w-full p-3 pr-10 border border-beige-300 dark:border-zinc-600 bg-beige-50 dark:bg-zinc-900 text-sm font-mono"
           />

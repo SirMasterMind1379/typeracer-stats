@@ -92,6 +92,16 @@ export default function Home() {
     }
   }, [data, loading]);
 
+  /* ── input change handler (detects API key in username field) ─ */
+  const handleInputChange = useCallback((v: string) => {
+    if (/^[a-zA-Z0-9]{32}$/.test(v.trim())) {
+      setApiKey(v.trim());
+      setInput("");
+    } else {
+      setInput(v);
+    }
+  }, []);
+
   /* ── form submission ─────────────────────────────────────── */
   const handleSubmit = useCallback(
     async () => {
@@ -102,8 +112,10 @@ export default function Home() {
       setZoomBounds(null);
 
       let username = input.trim();
-      const match = username.match(/typeracer\.com\/pit\/racer\?user=(\w+)/);
+      const match = username.match(/typeracer\.com\/pit\/(?:profile|racer)\?user=(\w+)/);
       if (match) username = match[1];
+
+      const key = apiKey.trim();
 
       if (!username) {
         setError("Please enter a username or profile link");
@@ -115,7 +127,6 @@ export default function Home() {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
         const body: Record<string, string> = { username };
-        const key = apiKey.trim();
         if (key) {
           body.apiKey = key;
           body.apiUsername = username;
@@ -138,8 +149,8 @@ export default function Home() {
         const filtered = allRaces.filter((r: Race) => (r.totalRacers ?? 0) > 1 || (r.mode && !r.mode.toLowerCase().includes("qotd")));
         result.races = filtered;
         setData(result);
-        setDataSource("api");
-        if (result.username && result.username !== username) {
+        setDataSource(result.note ? null : "api");
+        if (result.username && result.username !== input.trim()) {
           setInput(result.username);
         }
       } catch (err: any) {
@@ -356,19 +367,19 @@ export default function Home() {
       <div className="max-w-6xl mx-auto p-4 sm:p-8 flex flex-col gap-6">
         <Header dark={dark} onToggle={toggleTheme} />
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
             <SearchForm
               value={input}
               apiKey={apiKey}
-              onChange={setInput}
+              onChange={handleInputChange}
               onApiKeyChange={setApiKey}
               onSubmit={handleSubmit}
               loading={loading}
             />
           </div>
-          <div className="sm:w-80">
-            {dataSource === "api" ? (
+          <div className="flex items-start">
+            {data ? (
               <button
                 onClick={handleClear}
                 className="w-full px-4 py-2.5 text-sm font-medium border bg-beige-50 dark:bg-zinc-900 border-beige-300 dark:border-zinc-700 hover:bg-beige-200 dark:hover:bg-zinc-800 text-center"

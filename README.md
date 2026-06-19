@@ -3,7 +3,7 @@
 [![Vercel](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftyperacer-stats.vercel.app&query=%24&label=Vercel&color=8B0000)](https://typeracer-stats.vercel.app)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-8B0000)](https://sirmastermind1379.github.io/typeracer-stats/)
 
-> **Built with [opencode](https://opencode.ai)'s big-pickle free model**
+> **Built with [opencode](https://opencode.ai)** — v1.1.0 onward uses big-pickle (free model); earlier versions used DeepSeek V4 Flash low mode
 
 | Deployment | URL | API Analysis | CSV Import |
 |---|---|---|---|
@@ -85,30 +85,31 @@ npm run build
 npm start
 ```
 
-## Release Notes (v1.1.0)
+## Release Notes
 
-This release introduces several major features and refinements:
+### v1.2.0 — QOTD fix, API key detection, grid layout
 
-### What's New
+- **QOTD hidden** for non-API / scrape results (no false "Not Done")
+- **Clear button** resets both username and API key fields
+- **Auto-populate** username from CSV import and API response
+- **API key in username field** auto-detected (32 alphanumeric chars) and moved to API key field
+- **Grid layout** for balanced SearchForm / DataImport columns
+- **GitHub link** button added in header
+- **Profile link** regex now accepts `data.typeracer.com/pit/profile?user=...`
 
-- **CSV/ZIP import** — parse your race export via drag-and-drop or file picker (PapaParse + JSZip)
-- **Wins chart** — dedicated wins-per-100 bar chart with independent trend line (excludes QOTD/solo races)
-- **Data source management** — API data has priority; import hidden when API active; "Clear" button to reset
-- **Nice axis ranges** — accuracy capped at 100 with clean integer ticks; speed/points auto-round
-- **Auto-scroll** — page scrolls to profile after search or import completes
-- **Server auto-restart** — PowerShell wrapper restarts dev server on crash
+### v1.1.0 — CSV import, wins chart, axis refinements
 
-### Refinements
+- **CSV/ZIP import** — drag-and-drop or file picker (PapaParse + JSZip)
+- **Wins chart** — dedicated wins-per-100 bar chart (excludes QOTD/solo races)
+- **Data source management** — API priority; "Clear" button to reset
+- **Nice axis ranges** — accuracy capped at 100 with clean integer ticks
+- **Auto-scroll** to profile after search or import
+- **Server auto-restart** script
 
-- Wins filtered out of speed/accuracy line chart into their own dedicated view
-- Y-axis domains use clean rounded values for all metrics
-- Import-only data hides the heatmap (no date context)
-- "Race N" x-axis labels are used when race dates are invalid
-- Side-by-side layout for SearchForm + DataImport on wider screens
+### Credits
 
-### Built With
-
-This release was built using **opencode**'s **big-pickle** free model.
+- **v1.1.0 and v1.2.0** built with [opencode](https://opencode.ai)'s **big-pickle** free model
+- **v1.0.0 and earlier** built with **DeepSeek V4 Flash low mode**
 
 ## Future Considerations
 

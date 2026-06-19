@@ -114,10 +114,10 @@ export async function POST(request: Request) {
 
     const racer = racerRes.data || racerRes.success;
     const statsArray = Array.isArray(statsRes.data) ? statsRes.data : [];
-    const stats = statsArray.find((s: any) => s.universe === 'play') || statsArray[0] || null;
-    const rawRaces = racesRes.data || [];
+    const apiStats = statsArray.find((s: any) => s.universe === 'play') || statsArray[0] || null;
+    const rawRaces = Array.isArray(racesRes.data) ? racesRes.data : [];
 
-    const races = (Array.isArray(rawRaces) ? rawRaces : [])
+    const races = rawRaces
       .filter((r: any) => r.wpm != null)
       .map((r: any) => ({
         id: r.rid,
@@ -129,7 +129,16 @@ export async function POST(request: Request) {
         totalRacers: r.nr,
         textId: r.tid,
         won: r.r === 1,
+        mode: r.mode || r.gn || r.game_mode || undefined,
       }));
+
+    // Defensive stats parsing — handle different field name conventions
+    const totalRaces = apiStats?.total_races ?? apiStats?.totalRaces ?? races.length ?? 0;
+    const totalWins = apiStats?.total_wins ?? apiStats?.totalWins;
+    const statsPoints = apiStats?.points ?? null;
+    const avgWpm = apiStats?.avg_wpm ?? apiStats?.avgWpm;
+    const bestWpm = apiStats?.best_wpm ?? apiStats?.bestWpm;
+    const certWpm = apiStats?.cert_wpm ?? apiStats?.certWpm ?? null;
 
     let qotdDone = false;
     const today = new Date().toISOString().slice(0, 10);
@@ -157,16 +166,15 @@ export async function POST(request: Request) {
       joinedAt: racer?.joined_at || null,
       premium: racer?.premium || false,
       badges: racer?.badges || [],
-      stats: stats
-        ? {
-            totalRaces: stats.total_races,
-            totalWins: stats.total_wins,
-            points: stats.points,
-            avgWpm: stats.avg_wpm,
-            bestWpm: stats.best_wpm,
-            certWpm: stats.cert_wpm,
-          }
-        : null,
+      stats: {
+        totalRaces,
+        totalWins,
+        points: statsPoints,
+        avgWpm,
+        bestWpm,
+        certWpm,
+        typistLevel: null,
+      },
       races,
       qotdDone,
     });

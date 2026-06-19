@@ -1,6 +1,7 @@
 import {
   LineChart,
   Line,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -11,24 +12,9 @@ import {
 } from "recharts";
 import CustomTooltip from "./CustomTooltip";
 
-/**
- * ChartProps — all data and callbacks the chart needs from the parent.
- *
- * @param data             - Array of data points with per-race values, cumulative points, regression line.
- * @param selectedMetric   - Currently active metric (speed / accuracy / points).
- * @param lineColor        - Color for the primary metric line.
- * @param regressionColor  - Color for the dashed regression trend line.
- * @param regression       - Regression result or null (computed in parent).
- * @param onMouseDown      - Callback when user presses mouse on the chart.
- * @param onMouseMove      - Callback when user moves mouse while holding.
- * @param onMouseUp        - Callback when user releases mouse (finalises zoom).
- * @param refAreaLeft      - Left boundary of the zoom selection (timestamp or null).
- * @param refAreaRight     - Right boundary of the zoom selection (timestamp or null).
- * @param formatDate       - Function to format an ISO date string for the reference area.
- */
 export interface ChartProps {
   data: any[];
-  selectedMetric: "speed" | "accuracy" | "points";
+  selectedMetric: "speed" | "accuracy" | "points" | "wins";
   lineColor: string;
   regressionColor: string;
   regression: { slope: number; line: number[] } | null;
@@ -38,13 +24,9 @@ export interface ChartProps {
   refAreaLeft: number | null;
   refAreaRight: number | null;
   formatDate: (d: string) => string;
+  yDomain?: { min: number; max: number };
 }
 
-/**
- * Chart — recharts LineChart showing per-race speed/accuracy,
- * cumulative points, optional wins-per-10 overlay, and a
- * dashed regression trend line.
- */
 export default function Chart({
   data,
   selectedMetric,
@@ -57,16 +39,22 @@ export default function Chart({
   refAreaLeft,
   refAreaRight,
   formatDate,
+  yDomain,
 }: ChartProps) {
+  const isWins = selectedMetric === "wins";
   const isPoints = selectedMetric === "points";
 
-  const metricLabel = isPoints
+  const metricLabel = isWins
+    ? "Wins per 100 races"
+    : isPoints
     ? "Cumulative Points"
     : selectedMetric === "speed"
     ? "Speed (WPM)"
     : "Accuracy (%)";
 
-  const dataKey = isPoints
+  const dataKey = isWins
+    ? "winsPer100"
+    : isPoints
     ? "cumulativePoints"
     : selectedMetric === "speed"
     ? "speed"
@@ -89,41 +77,36 @@ export default function Chart({
           />
           <YAxis
             tick={{ fontSize: 11 }}
-            domain={[selectedMetric === "accuracy" ? 80 : "auto", "auto"]}
+            domain={yDomain ? [yDomain.min, yDomain.max] : ["auto", "auto"]}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Line
-            type="monotone"
-            dataKey={dataKey}
-            name={metricLabel}
-            stroke={lineColor}
-            strokeWidth={1.5}
-            dot={false}
-            activeDot={{ r: 3 }}
-          />
-          {selectedMetric === "speed" && (
-            <Line
-              type="monotone"
-              dataKey="winsPer10"
-              name="Wins per 10 races"
-              stroke="#ff7300"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 3 }}
-            />
-          )}
-          {regression && !isPoints && (
-            <Line
-              type="linear"
-              dataKey="regressionLine"
-              name={`Trend (${regression.slope > 0 ? "+" : ""}${regression.slope.toFixed(4)}/race)`}
-              stroke={regressionColor}
-              strokeWidth={1.5}
-              strokeDasharray="6 3"
-              dot={false}
-              activeDot={false}
-            />
+          {isWins ? (
+            <Bar dataKey="winsPer100" name="Wins per 100 races" fill="#ff7300" fillOpacity={0.4} radius={[0, 0, 0, 0]} barSize={8} />
+          ) : (
+            <>
+              <Line
+                type="monotone"
+                dataKey={dataKey}
+                name={metricLabel}
+                stroke={lineColor}
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 3 }}
+              />
+              {regression && !isPoints && (
+                <Line
+                  type="linear"
+                  dataKey="regressionLine"
+                  name={`Trend (${regression.slope > 0 ? "+" : ""}${regression.slope.toFixed(4)}/race)`}
+                  stroke={regressionColor}
+                  strokeWidth={1.5}
+                  strokeDasharray="6 3"
+                  dot={false}
+                  activeDot={false}
+                />
+              )}
+            </>
           )}
           {refAreaLeft && refAreaRight && (
             <ReferenceArea

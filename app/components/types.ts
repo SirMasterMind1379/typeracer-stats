@@ -17,6 +17,8 @@ export interface Race {
   textId: number;
   /** Whether the user placed first. */
   won: boolean;
+  /** Race mode (e.g., "multiplayer", "room", "qotd"). */
+  mode?: string;
 }
 
 /** Aggregate stats for a universe (scrape or API). */
@@ -46,7 +48,7 @@ export interface UserData {
 }
 
 /** Which metric is currently selected for the chart. */
-export type Metric = "speed" | "accuracy" | "points";
+export type Metric = "speed" | "accuracy" | "points" | "wins";
 
 /** Computed stats for the currently visible timeframe. */
 export interface TimeframeStats {

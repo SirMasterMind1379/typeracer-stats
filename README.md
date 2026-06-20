@@ -3,8 +3,6 @@
 [![Vercel](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftyperacer-stats.vercel.app&query=%24&label=Vercel&color=8B0000)](https://typeracer-stats.vercel.app)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-8B0000)](https://sirmastermind1379.github.io/typeracer-stats/)
 
-> **Built with [opencode](https://opencode.ai)** — v1.1.0 onward uses big-pickle (free model); v1.3.0 also uses big-pickle; earlier versions used DeepSeek V4 Flash low mode
-
 | Deployment | URL | API Analysis | CSV Import |
 |---|---|---|---|
 | **Vercel** (live demo) | [typeracer-stats.vercel.app](https://typeracer-stats.vercel.app) | ✅ Full API | ✅ |
@@ -130,8 +128,7 @@ npm start
 
 ### Credits
 
-- **v1.3.0** built with [opencode](https://opencode.ai)'s **big-pickle** free model
-- **v1.1.0 and v1.2.0** built with opencode's **big-pickle** free model
+- **v1.1.0 onward** built with [opencode](https://opencode.ai)'s **big-pickle** free model
 - **v1.0.0 and earlier** built with **DeepSeek V4 Flash low mode**
 
 ## Future Considerations

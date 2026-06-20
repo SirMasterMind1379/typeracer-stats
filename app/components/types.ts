@@ -73,3 +73,41 @@ export interface TimeframeStats {
   totalPoints: string;
   winRate: string;
 }
+
+/** Whether a race is "competitive" (multiplayer, not QOTD). */
+export function isCompetitiveRace(r: Race): boolean {
+  return (r.totalRacers ?? 0) > 1 || (!!r.mode && !r.mode.toLowerCase().includes("qotd"));
+}
+
+/** Sort races chronologically by date. */
+export function sortByDate(races: Race[]): Race[] {
+  return [...races].sort((a, b) => {
+    const da = new Date(a.date.replace(" ", "T")).getTime();
+    const db = new Date(b.date.replace(" ", "T")).getTime();
+    if (!isNaN(da) && !isNaN(db)) return da - db;
+    return 0;
+  });
+}
+
+/** Compute consecutive-day streak with optional threshold and offset. */
+export function computeStreak(
+  races: Race[],
+  options?: { minRaces?: number; offsetDays?: number },
+): number {
+  if (!races.length) return 0;
+  const { minRaces = 1, offsetDays = 0 } = options ?? {};
+  const counts = new Map<string, number>();
+  for (const r of races) {
+    const key = r.date.slice(0, 10);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  let count = 0;
+  const d = new Date();
+  d.setDate(d.getDate() - offsetDays);
+  const threshold = minRaces > 1 ? minRaces : 1;
+  while ((counts.get(d.toISOString().slice(0, 10)) || 0) >= threshold) {
+    count++;
+    d.setDate(d.getDate() - 1);
+  }
+  return count;
+}

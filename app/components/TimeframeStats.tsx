@@ -1,11 +1,11 @@
-import type { TimeframeStats as TStats } from "./types";
+import type { TimeframeStats } from "./types";
 
 /**
  * TimeframeStats — summary cards for the currently visible time range.
  *
  * @param stats - Computed stats for the selected timeframe (may be null).
  */
-export default function TimeframeStats({ stats }: { stats: TStats | null }) {
+export default function TimeframeStats({ stats }: { stats: TimeframeStats | null }) {
   if (!stats) return null;
 
   const items = [

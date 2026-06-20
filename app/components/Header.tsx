@@ -17,6 +17,14 @@ export default function Header({
     <div className="flex items-center justify-between">
       <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
         TypeRacer Stats
+        <a
+          href="https://github.com/SirMasterMind1379/typeracer-stats/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-2 text-xs font-normal text-beige-500 dark:text-zinc-500 hover:text-beige-700 dark:hover:text-zinc-300 align-baseline"
+        >
+          v{process.env.NEXT_PUBLIC_APP_VERSION}
+        </a>
       </h1>
       <div className="flex items-center gap-2">
         <a

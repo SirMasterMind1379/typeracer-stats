@@ -13,19 +13,10 @@ import DataImport from "./components/DataImport";
 import ExportButton from "./components/ExportButton";
 import CsvExportButton from "./components/CsvExportButton";
 import type { UserData, Race, Metric, TimeframeStats as TStats } from "./components/types";
+import { formatDisplayDate, isCompetitiveRace, sortByDate } from "./components/types";
 
 const WINDOW = 100;
 const raceLimitOptions = [1000, 500, 200, 100, 50, 20];
-
-import { formatDisplayDate } from "./components/types";
-
-function formatDate(dateStr: string) {
-  return formatDisplayDate(dateStr);
-}
-
-function toDate(dateStr: string) {
-  return new Date(dateStr).getTime();
-}
 
 function hasValidDates(races: Race[]): boolean {
   return races.length > 0 && races.some((r) => {
@@ -158,7 +149,7 @@ export default function Home() {
         }
 
         const allRaces = result.races || [];
-        const filtered = allRaces.filter((r: Race) => (r.totalRacers ?? 0) > 1 || (r.mode && !r.mode.toLowerCase().includes("qotd")));
+        const filtered = allRaces.filter((r: Race) => isCompetitiveRace(r));
         result.races = filtered;
         setData(result);
         setFullRaces(allRaces);
@@ -192,27 +183,17 @@ export default function Home() {
     setZoomBounds(null);
     setInput(username);
 
-    const filtered = races.filter((r) => (r.totalRacers ?? 0) > 1 || (r.mode && !r.mode.toLowerCase().includes("qotd")));
-    const sorted = [...filtered].sort((a, b) => {
-      const da = new Date(a.date.replace(" ", "T")).getTime();
-      const db = new Date(b.date.replace(" ", "T")).getTime();
-      if (!isNaN(da) && !isNaN(db)) return da - db;
-      return 0;
-    }).map((r) => ({ ...r, date: r.date.replace(" ", "T") }));
+    const filtered = races.filter((r) => isCompetitiveRace(r));
+    const sorted = sortByDate(filtered).map((r) => ({ ...r, date: r.date.replace(" ", "T") }));
 
     const total = sorted.length;
     const speeds = sorted.map((r) => r.speed);
     const avgWpm = speeds.reduce((s, v) => s + v, 0) / total || 0;
     const bestWpm = Math.max(...speeds) || 0;
     const totalPoints = sorted.reduce((s, r) => s + (r.points || 0), 0);
-    const totalWins = sorted.filter((r) => r.won && (r.totalRacers > 1) && (!r.mode || !r.mode.toLowerCase().includes("qotd"))).length;
+    const totalWins = sorted.filter((r) => r.won && isCompetitiveRace(r)).length;
 
-    const allRaces = [...races].sort((a, b) => {
-      const da = new Date(a.date.replace(" ", "T")).getTime();
-      const db = new Date(b.date.replace(" ", "T")).getTime();
-      if (!isNaN(da) && !isNaN(db)) return da - db;
-      return 0;
-    }).map((r) => ({ ...r, date: r.date.replace(" ", "T") }));
+    const allRaces = sortByDate(races).map((r) => ({ ...r, date: r.date.replace(" ", "T") }));
 
     setData({
       username,
@@ -291,18 +272,11 @@ export default function Home() {
 
   const allChartData = useMemo(() => {
     if (!data?.races.length) return [];
-    return [...data.races]
-      .sort((a, b) => {
-        const da = new Date(a.date).getTime();
-        const db = new Date(b.date).getTime();
-        if (!isNaN(da) && !isNaN(db)) return da - db;
-        return 0;
-      })
-      .map((r, i) => ({
-        ...r,
-        dateLabel: useDateLabels ? formatDate(r.date) : `Race ${i + 1}`,
-        ts: useDateLabels ? new Date(r.date).getTime() : i,
-      }));
+    return sortByDate(data.races).map((r, i) => ({
+      ...r,
+      dateLabel: useDateLabels ? formatDisplayDate(r.date) : `Race ${i + 1}`,
+      ts: useDateLabels ? new Date(r.date).getTime() : i,
+    }));
   }, [data, useDateLabels]);
 
   const zoomedData = useMemo(() => {
@@ -322,7 +296,7 @@ export default function Home() {
     for (let i = 0; i < filteredData.length; i++) {
       const d = filteredData[i];
       const slice = filteredData.slice(Math.max(0, i - WINDOW + 1), i + 1);
-      const wins = slice.filter((r) => r.won && (r.totalRacers > 1) && (!r.mode || !r.mode.toLowerCase().includes("qotd"))).length;
+      const wins = slice.filter((r) => r.won && isCompetitiveRace(r)).length;
       cp += d.points || 0;
       result.push({ ...d, speed: d.speed, accuracy: d.accuracy, winsPer100: +wins.toFixed(1), cumulativePoints: cp });
     }
@@ -376,7 +350,7 @@ export default function Home() {
     const n = filteredData.length;
     const avgSpeed = filteredData.reduce((s, r) => s + r.speed, 0) / n;
     const avgAcc = filteredData.reduce((s, r) => s + r.accuracy, 0) / n;
-    const wins = filteredData.filter((r) => r.won && (r.totalRacers > 1) && (!r.mode || !r.mode.toLowerCase().includes("qotd"))).length;
+    const wins = filteredData.filter((r) => r.won && isCompetitiveRace(r)).length;
     const totalPoints = filteredData.reduce((s, r) => s + (r.points || 0), 0);
     return {
       races: n,
@@ -531,7 +505,7 @@ export default function Home() {
                     onMouseUp={handleMouseUp}
                     refAreaLeft={useDateLabels ? refAreaLeft : null}
                     refAreaRight={useDateLabels ? refAreaRight : null}
-                    formatDate={formatDate}
+                    formatDate={formatDisplayDate}
                     yDomain={yAxisDomain?.[selectedMetric]}
                   />
                   <p className="no-export text-xs text-beige-600 dark:text-zinc-500 mt-2 text-center">

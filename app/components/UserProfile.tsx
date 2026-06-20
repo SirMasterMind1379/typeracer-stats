@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Flame } from "lucide-react";
 import type { UserData } from "./types";
-import { formatDisplayDate } from "./types";
+import { formatDisplayDate, computeStreak } from "./types";
 
 /**
  * UserProfile — displays racer info, streaks, and QOTD.
@@ -11,67 +11,10 @@ import { formatDisplayDate } from "./types";
 export default function UserProfile({ data, dataSource }: { data: UserData; dataSource: "api" | "import" | null }) {
   const profileUrl = `https://data.typeracer.com/pit/profile?user=${data.username}`;
 
-  /** Consecutive days with any race, ending today. */
-  const streak = useMemo(() => {
-    if (!data.races.length) return 0;
-    const dates = new Set(data.races.map((r) => r.date.slice(0, 10)));
-    let count = 0;
-    const d = new Date();
-    while (dates.has(d.toISOString().slice(0, 10))) {
-      count++;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }, [data]);
-
-  /** Consecutive days with any race, ending yesterday. */
-  const streakYesterday = useMemo(() => {
-    if (!data.races.length) return 0;
-    const dates = new Set(data.races.map((r) => r.date.slice(0, 10)));
-    let count = 0;
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    while (dates.has(d.toISOString().slice(0, 10))) {
-      count++;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }, [data]);
-
-  /** Consecutive days with 10+ races, ending today. */
-  const streak10 = useMemo(() => {
-    if (!data.races.length) return 0;
-    const counts = new Map<string, number>();
-    for (const r of data.races) {
-      const key = r.date.slice(0, 10);
-      counts.set(key, (counts.get(key) || 0) + 1);
-    }
-    let count = 0;
-    const d = new Date();
-    while ((counts.get(d.toISOString().slice(0, 10)) || 0) >= 10) {
-      count++;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }, [data]);
-
-  /** Consecutive days with 10+ races, ending yesterday. */
-  const streak10Yesterday = useMemo(() => {
-    if (!data.races.length) return 0;
-    const counts = new Map<string, number>();
-    for (const r of data.races) {
-      const key = r.date.slice(0, 10);
-      counts.set(key, (counts.get(key) || 0) + 1);
-    }
-    let count = 0;
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    while ((counts.get(d.toISOString().slice(0, 10)) || 0) >= 10) {
-      count++;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }, [data]);
+  const streak = useMemo(() => computeStreak(data.races), [data]);
+  const streakYesterday = useMemo(() => computeStreak(data.races, { offsetDays: -1 }), [data]);
+  const streak10 = useMemo(() => computeStreak(data.races, { minRaces: 10 }), [data]);
+  const streak10Yesterday = useMemo(() => computeStreak(data.races, { minRaces: 10, offsetDays: -1 }), [data]);
 
   const todayCount = useMemo(() => {
     if (!data.races.length) return 0;

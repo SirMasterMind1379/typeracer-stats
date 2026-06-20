@@ -1,17 +1,16 @@
 {
   "name": "typeracer-stats",
-  "version": "1.0.0",
+  "version": "1.3.1",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 1384",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "node scripts/patch-html2canvas.js"
+    "postinstall": "echo OK"
   },
   "dependencies": {
     "dom-to-image-more": "^3.10.0",
-    "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "lucide-react": "^1.20.0",
     "next": "16.2.9",

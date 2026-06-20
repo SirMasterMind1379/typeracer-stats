@@ -68,12 +68,15 @@ export default function Chart({
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
+          margin={{ left: 12, bottom: 30 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
           <XAxis
             dataKey="dateLabel"
-            tick={{ fontSize: 11 }}
+            tick={{ fontSize: 11, angle: -15, textAnchor: "end" }}
             interval="preserveStartEnd"
+            height={40}
+            padding={{ left: 10 }}
           />
           <YAxis
             tick={{ fontSize: 11 }}

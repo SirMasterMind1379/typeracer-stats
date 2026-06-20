@@ -12,7 +12,7 @@ function parseCSVText(text: string): Race[] {
   Papa.parse(text, {
     header: true,
     skipEmptyLines: true,
-    fastMode: true,
+    dynamicTyping: true,
     step: (row: any) => {
       const r = row.data;
       const wpm = parseFloat(r.WPM ?? r.wpm);

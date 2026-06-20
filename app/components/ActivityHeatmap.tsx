@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Check } from "lucide-react";
 import type { Race } from "./types";
+import { formatDisplayDate } from "./types";
 
 /**
  * ActivityHeatmapProps
@@ -34,19 +35,23 @@ export default function ActivityHeatmap({ races, dark }: ActivityHeatmapProps) {
     return map;
   }, [races]);
 
-  /** Build a 52-week grid of cells. */
+  /** Build exactly 52 weeks of cells, each column Sun–Sat, ending on the upcoming Saturday. */
   const cells = useMemo(() => {
     const today = new Date();
-    const out: { date: string; points: number; count: number; day: number; week: number }[] = [];
-    const start = new Date(today);
-    start.setDate(start.getDate() - 364);
-    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+    const todayStr = today.toISOString().slice(0, 10);
+    // Closest upcoming Saturday (or today if Saturday)
+    const end = new Date(today);
+    end.setDate(end.getDate() + (6 - end.getDay()));
+    // Sunday 363 days before end = first day of 52-week grid
+    const start = new Date(end);
+    start.setDate(start.getDate() - 363);
+    const out: { date: string; points: number; count: number; day: number; week: number; future: boolean }[] = [];
+    for (let i = 0; i < 364; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
       const key = d.toISOString().slice(0, 10);
       const info = byDate.get(key) || { points: 0, count: 0 };
-      const dayOfWeek = d.getDay();
-      const msDiff = d.getTime() - start.getTime();
-      const week = Math.floor(msDiff / (7 * 86400000));
-      out.push({ date: key, points: info.points, count: info.count, day: dayOfWeek, week });
+      out.push({ date: key, points: info.points, count: info.count, day: d.getDay(), week: Math.floor(i / 7), future: key > todayStr });
     }
     return out;
   }, [byDate]);
@@ -54,7 +59,16 @@ export default function ActivityHeatmap({ races, dark }: ActivityHeatmapProps) {
   const maxPoints = Math.max(1, ...cells.map((c) => c.points));
   const weekCount = cells.length > 0 ? cells[cells.length - 1].week + 1 : 0;
 
-  const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
+  const weekDates = useMemo(() => {
+    const dates: string[] = [];
+    for (let w = 0; w < weekCount; w++) {
+      const sunCell = cells.find((c) => c.week === w && c.day === 0);
+      dates.push(sunCell ? formatDisplayDate(sunCell.date) : "");
+    }
+    return dates;
+  }, [cells, weekCount]);
+
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   function cellColor(points: number, count: number): string {
     if (count === 0) return dark ? "bg-zinc-800" : "bg-beige-100";
@@ -78,42 +92,66 @@ export default function ActivityHeatmap({ races, dark }: ActivityHeatmapProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <div className="inline-flex gap-1">
-        {/* Day-of-week labels */}
-        <div className="flex flex-col gap-1 mr-1">
-          {dayLabels.map((l, i) => (
+    <div className="overflow-x-auto w-full flex justify-center">
+      <div
+        className="grid"
+        style={{
+          gridTemplateColumns: `auto repeat(${weekCount}, 14px)`,
+          gridTemplateRows: `35px repeat(7, 14px)`,
+          gap: "3px",
+        }}
+      >
+        {/* Day-of-week labels — column 1, rows 2–8 */}
+        {dayLabels.map((l, i) => (
+          <div
+            key={`label-${i}`}
+            className="text-[10px] leading-[14px] text-beige-600 dark:text-zinc-500 text-right pr-1 flex items-center justify-end"
+            style={{ gridColumn: 1, gridRow: i + 2 }}
+          >
+            {l}
+          </div>
+        ))}
+        {/* Week-start date labels (angled) — row 1, columns 2–53 */}
+        {weekDates.map((d, w) => (
+          <div
+            key={`date-${w}`}
+            className="text-[9px] leading-[10px] text-beige-600 dark:text-zinc-500 flex items-end"
+            style={{
+              gridColumn: w + 2,
+              gridRow: 1,
+              transform: "rotate(-30deg)",
+              transformOrigin: "bottom left",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {d}
+          </div>
+        ))}
+        {/* Cells — columns 2–53, rows 2–8 */}
+        {cells.map((c) => {
+          const key = `${c.week}-${c.day}`;
+          if (c.future) {
+            return (
+              <div
+                key={key}
+                className="bg-transparent"
+                style={{ gridColumn: c.week + 2, gridRow: c.day + 2 }}
+              />
+            );
+          }
+          return (
             <div
-              key={i}
-              className="h-[14px] text-[10px] leading-[14px] text-beige-600 dark:text-zinc-500 w-8 text-right pr-1"
+              key={key}
+              title={`${c.date} — ${c.count} race${c.count !== 1 ? "s" : ""}, ${c.points} pts`}
+              className={`flex items-center justify-center w-[14px] h-[14px] ${cellColor(c.points, c.count)}`}
+              style={{ gridColumn: c.week + 2, gridRow: c.day + 2 }}
             >
-              {l}
+              {c.count > 0 && (
+                <Check size={10} className={checkMarkColor(c.points, c.count)} strokeWidth={3} />
+              )}
             </div>
-          ))}
-        </div>
-
-        {/* Grid of weeks */}
-        <div className="flex gap-[3px]">
-          {Array.from({ length: weekCount }, (_, w) => (
-            <div key={w} className="flex flex-col gap-[3px]">
-              {[0, 1, 2, 3, 4, 5, 6].map((day) => {
-                const c = cells.find((c) => c.week === w && c.day === day);
-                if (!c) return <div key={day} className="w-[14px] h-[14px] bg-transparent" />;
-                return (
-                  <div
-                    key={day}
-                    title={`${c.date} — ${c.count} race${c.count !== 1 ? "s" : ""}, ${c.points} pts`}
-                    className={`w-[14px] h-[14px] flex items-center justify-center ${cellColor(c.points, c.count)}`}
-                  >
-                    {c.count > 0 && (
-                      <Check size={10} className={checkMarkColor(c.points, c.count)} strokeWidth={3} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );

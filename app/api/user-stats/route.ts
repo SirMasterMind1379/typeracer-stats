@@ -155,9 +155,12 @@ export async function POST(request: Request) {
       // fall through to the race-based check below
     }
 
-    // If competitions didn't confirm QOTD, check if user raced today
+    // If competitions didn't confirm QOTD, check if user did a QOTD race today
     if (!qotdDone) {
-      qotdDone = races.some((r: any) => r.date && r.date.slice(0, 10) === today);
+      qotdDone = races.some((r: any) => {
+        if (!r.date) return false;
+        return r.date.slice(0, 10) === today && r.mode && r.mode.toLowerCase().includes("qotd");
+      });
     }
 
     return NextResponse.json({

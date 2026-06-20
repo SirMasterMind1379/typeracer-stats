@@ -11,14 +11,16 @@ import ActivityHeatmap from "./components/ActivityHeatmap";
 import ErrorBanner from "./components/ErrorBanner";
 import DataImport from "./components/DataImport";
 import ExportButton from "./components/ExportButton";
+import CsvExportButton from "./components/CsvExportButton";
 import type { UserData, Race, Metric, TimeframeStats as TStats } from "./components/types";
 
 const WINDOW = 100;
 const raceLimitOptions = [1000, 500, 200, 100, 50, 20];
 
+import { formatDisplayDate } from "./components/types";
+
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return formatDisplayDate(dateStr);
 }
 
 function toDate(dateStr: string) {
@@ -51,19 +53,15 @@ export default function Home() {
   const [apiKey, setApiKey] = useState("");
   const [data, setData] = useState<UserData | null>(null);
   const [dataSource, setDataSource] = useState<"api" | "import" | null>(null);
+  const [fullRaces, setFullRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   /* ── display state ───────────────────────────────────────── */
   const [selectedMetric, setSelectedMetric] = useState<Metric>("speed");
   const [raceLimit, setRaceLimit] = useState<number | null>(null);
-  const [dark, setDark] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("theme");
-      return stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    }
-    return false;
-  });
+  const [dark, setDark] = useState(false);
+  const themeInited = useRef(false);
 
   /* ── zoom state ──────────────────────────────────────────── */
   const [refAreaLeft, setRefAreaLeft] = useState<number | null>(null);
@@ -73,7 +71,20 @@ export default function Home() {
   /* ── scroll ref ──────────────────────────────────────────── */
   const profileRef = useRef<HTMLDivElement>(null);
 
+  /* ── track last submitted values for refresh button ─────── */
+  const lastSubmitted = useRef({ username: "", apiKey: "" });
+  const canRefresh = data !== null && input.trim() === lastSubmitted.current.username && apiKey.trim() === lastSubmitted.current.apiKey;
+
   /* ── theme side-effect ───────────────────────────────────── */
+  useEffect(() => {
+    if (!themeInited.current) {
+      themeInited.current = true;
+      const stored = localStorage.getItem("theme");
+      const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      setDark(isDark);
+    }
+  }, []);
+
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
@@ -150,7 +161,9 @@ export default function Home() {
         const filtered = allRaces.filter((r: Race) => (r.totalRacers ?? 0) > 1 || (r.mode && !r.mode.toLowerCase().includes("qotd")));
         result.races = filtered;
         setData(result);
+        setFullRaces(allRaces);
         setDataSource(result.note ? null : "api");
+        lastSubmitted.current = { username: input.trim(), apiKey: apiKey.trim() };
         if (result.username && result.username !== input.trim()) {
           setInput(result.username);
         }
@@ -194,6 +207,13 @@ export default function Home() {
     const totalPoints = sorted.reduce((s, r) => s + (r.points || 0), 0);
     const totalWins = sorted.filter((r) => r.won && (r.totalRacers > 1) && (!r.mode || !r.mode.toLowerCase().includes("qotd"))).length;
 
+    const allRaces = [...races].sort((a, b) => {
+      const da = new Date(a.date.replace(" ", "T")).getTime();
+      const db = new Date(b.date.replace(" ", "T")).getTime();
+      if (!isNaN(da) && !isNaN(db)) return da - db;
+      return 0;
+    }).map((r) => ({ ...r, date: r.date.replace(" ", "T") }));
+
     setData({
       username,
       name: username,
@@ -204,6 +224,7 @@ export default function Home() {
       qotdDone: false,
       note: "Imported from race export",
     });
+    setFullRaces(allRaces);
     setDataSource("import");
   }, [dataSource]);
 
@@ -211,6 +232,7 @@ export default function Home() {
   const handleClear = useCallback(() => {
     setData(null);
     setDataSource(null);
+    setFullRaces([]);
     setInput("");
     setApiKey("");
     setError("");
@@ -219,22 +241,32 @@ export default function Home() {
     setZoomBounds(null);
   }, []);
 
+  /* ── ref to keep chart data accessible from zoom callbacks ── */
+  const chartDataRef = useRef<any[]>([]);
+
   /* ── zoom handlers ───────────────────────────────────────── */
-  const handleMouseDown = useCallback((e: any) => {
-    if (!e?.activeLabel) return;
-    setRefAreaLeft(toDate(e.activeLabel));
+  const handleMouseDown = useCallback((_nextState: any) => {
+    const idx = _nextState?.activeIndex;
+    if (idx == null) return;
+    const pt = chartDataRef.current[idx];
+    if (!pt) return;
+    setRefAreaLeft(pt.ts);
   }, []);
 
   const handleMouseMove = useCallback(
-    (e: any) => {
-      if (!refAreaLeft || !e?.activeLabel) return;
-      setRefAreaRight(toDate(e.activeLabel));
+    (_nextState: any) => {
+      if (refAreaLeft == null) return;
+      const idx = _nextState?.activeIndex;
+      if (idx == null) return;
+      const pt = chartDataRef.current[idx];
+      if (!pt) return;
+      setRefAreaRight(pt.ts);
     },
     [refAreaLeft],
   );
 
   const handleMouseUp = useCallback(() => {
-    if (!refAreaLeft || !refAreaRight) {
+    if (refAreaLeft == null || refAreaRight == null) {
       setRefAreaLeft(null);
       setRefAreaRight(null);
       return;
@@ -321,6 +353,10 @@ export default function Home() {
     return rollingData.map((d, i) => ({ ...d, regressionLine: regression.line[i] }));
   }, [rollingData, regression]);
 
+  useEffect(() => {
+    chartDataRef.current = chartDataWithRegression;
+  }, [chartDataWithRegression]);
+
   const yAxisDomain = useMemo(() => {
     if (!chartDataWithRegression.length) return null;
     const speeds = chartDataWithRegression.map((d) => d.speed);
@@ -361,6 +397,9 @@ export default function Home() {
   const regressionColor = selectedMetric === "speed" ? "#ff6b6b" : "#f39c12";
 
   const maxRaces = data?.races.length ?? 0;
+  const themeStr = dark ? "dark" : "light";
+  const limitStr = raceLimit ? `last-${raceLimit}` : "all";
+  const chartFilename = `chart_${themeStr}_${selectedMetric}_${limitStr}.png`;
 
   /* ── render ──────────────────────────────────────────────── */
   return (
@@ -377,16 +416,20 @@ export default function Home() {
               onApiKeyChange={setApiKey}
               onSubmit={handleSubmit}
               loading={loading}
+              canRefresh={canRefresh}
             />
           </div>
           <div className="flex items-start">
             {data ? (
-              <button
-                onClick={handleClear}
-                className="w-full px-4 py-2.5 text-sm font-medium border bg-beige-50 dark:bg-zinc-900 border-beige-300 dark:border-zinc-700 hover:bg-beige-200 dark:hover:bg-zinc-800 text-center"
-              >
-                Clear
-              </button>
+              <div className="flex flex-col gap-2 w-full">
+                <button
+                  onClick={handleClear}
+                  className="w-full py-3 text-sm font-medium border bg-beige-50 dark:bg-zinc-900 border-beige-300 dark:border-zinc-700 hover:bg-beige-200 dark:hover:bg-zinc-800 text-center"
+                >
+                  Clear
+                </button>
+                <CsvExportButton data={data} allRaces={fullRaces} />
+              </div>
             ) : (
               <DataImport onDataParsed={handleImport} />
             )}
@@ -474,7 +517,7 @@ export default function Home() {
                           {(regression.slope * 100).toFixed(2)} per 100 races)
                         </span>
                       )}
-                      <ExportButton targetId="chart-export" filename="typeracer-chart.png" />
+                      <ExportButton targetId="chart-export" filename={chartFilename} />
                     </div>
                   </div>
                   <Chart
@@ -491,7 +534,7 @@ export default function Home() {
                     formatDate={formatDate}
                     yDomain={yAxisDomain?.[selectedMetric]}
                   />
-                  <p className="text-xs text-beige-600 dark:text-zinc-500 mt-2 text-center">
+                  <p className="no-export text-xs text-beige-600 dark:text-zinc-500 mt-2 text-center">
                     {useDateLabels
                       ? "Drag on the chart to select a timeframe. Averages update automatically."
                       : "Races shown in sequential order."}
@@ -504,10 +547,10 @@ export default function Home() {
                       <h3 className="text-sm font-semibold text-beige-700 dark:text-zinc-400 uppercase tracking-wide">
                         Daily Activity
                       </h3>
-                      <ExportButton targetId="heatmap-export" filename="typeracer-heatmap.png" />
+                      <ExportButton targetId="heatmap-export" filename={`heatmap_${themeStr}.png`} />
                     </div>
                     <ActivityHeatmap races={data.races} dark={dark} />
-                    <div className="flex items-center justify-end gap-1 mt-2 text-[10px] text-beige-600 dark:text-zinc-500">
+                    <div className="flex items-center justify-center gap-1 mt-2 text-[10px] text-beige-600 dark:text-zinc-500">
                       <span>Less</span>
                       <div className="flex gap-[2px]">
                         {["bg-beige-100", "bg-red-100", "bg-red-200", "bg-red-400", "bg-red-600", "bg-red-800", "bg-red-900"].map(

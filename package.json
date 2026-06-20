@@ -6,9 +6,11 @@
     "dev": "next dev --webpack --port 1384",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "node scripts/patch-html2canvas.js"
   },
   "dependencies": {
+    "dom-to-image-more": "^3.10.0",
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "lucide-react": "^1.20.0",

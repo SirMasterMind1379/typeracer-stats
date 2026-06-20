@@ -8,6 +8,7 @@ export default function SearchForm({
   onApiKeyChange,
   onSubmit,
   loading,
+  canRefresh,
 }: {
   value: string;
   apiKey: string;
@@ -15,6 +16,7 @@ export default function SearchForm({
   onApiKeyChange: (v: string) => void;
   onSubmit: () => void;
   loading: boolean;
+  canRefresh?: boolean;
 }) {
   const [showKey, setShowKey] = useState(false);
   const [showField, setShowField] = useState(false);
@@ -25,7 +27,7 @@ export default function SearchForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl mx-auto w-full flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="max-w-xl mx-auto w-full flex flex-col gap-2">
       <div className="flex gap-3">
         <input
           type="text"
@@ -39,9 +41,33 @@ export default function SearchForm({
           className="px-5 py-3 bg-red-900 text-beige-50 font-semibold hover:bg-red-800 disabled:opacity-50 text-sm"
           disabled={loading}
         >
-          {loading ? "Loading..." : "Search"}
+          {loading ? "Loading..." : canRefresh ? "Refresh" : "Search"}
         </button>
       </div>
+
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+        style={{ gridTemplateRows: showField ? "1fr" : "0fr" }}
+      >
+          <div className="overflow-hidden">
+            <div className="relative">
+          <input
+            type={showKey ? "text" : "password"}
+            value={apiKey}
+            onChange={(e) => onApiKeyChange(e.target.value)}
+            placeholder="Your TypeRacer API key..."
+            className="w-full p-3 pr-10 border border-beige-300 dark:border-zinc-600 bg-beige-50 dark:bg-zinc-900 text-sm font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey((p) => !p)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-beige-600 dark:text-zinc-400 hover:text-beige-900 dark:hover:text-zinc-300"
+          >
+            {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+      </div>
+    </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         <button
@@ -64,25 +90,6 @@ export default function SearchForm({
           </a>
         </span>
       </div>
-
-      {showField && (
-        <div className="relative">
-          <input
-            type={showKey ? "text" : "password"}
-            value={apiKey}
-            onChange={(e) => onApiKeyChange(e.target.value)}
-            placeholder="Your TypeRacer API key..."
-            className="w-full p-3 pr-10 border border-beige-300 dark:border-zinc-600 bg-beige-50 dark:bg-zinc-900 text-sm font-mono"
-          />
-          <button
-            type="button"
-            onClick={() => setShowKey((p) => !p)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-beige-600 dark:text-zinc-400 hover:text-beige-900 dark:hover:text-zinc-300"
-          >
-            {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-      )}
     </form>
   );
 }

@@ -3,7 +3,7 @@
 [![Vercel](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftyperacer-stats.vercel.app&query=%24&label=Vercel&color=8B0000)](https://typeracer-stats.vercel.app)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-8B0000)](https://sirmastermind1379.github.io/typeracer-stats/)
 
-> **Built with [opencode](https://opencode.ai)** — v1.1.0 onward uses big-pickle (free model); earlier versions used DeepSeek V4 Flash low mode
+> **Built with [opencode](https://opencode.ai)** — v1.1.0 onward uses big-pickle (free model); v1.3.0 also uses big-pickle; earlier versions used DeepSeek V4 Flash low mode
 
 | Deployment | URL | API Analysis | CSV Import |
 |---|---|---|---|
@@ -87,6 +87,28 @@ npm start
 
 ## Release Notes
 
+### v1.3.0 — Date format, slanted labels, heatmap overhaul
+
+- **New date format** — all user-facing dates use `MMM/DD/YYYY` with 2-letter month abbreviations (JA, FE, MR, AP, MA, JN, JL, AG, SE, OC, NV, DE)
+- **Slanted chart labels** — x-axis date labels slanted at -15° to prevent overlap; left margin added to avoid cutoff
+- **Heatmap overhaul**:
+  - Week-start date labels slanted at -30° above each column
+  - All 7 weekday labels (Sun–Sat) shown on the left
+  - 52-column grid aligned to Sun–Sat weeks, ending on upcoming Saturday
+  - Future cells hidden (no empty blocks for unraced days)
+  - Converted to CSS Grid layout for precise alignment
+  - Centered within its container with proper date header row
+- **Gradient legend** — centered below the heatmap
+- **AGENTS.md** — documented preferences for date format, chart/heatmap styling, and heatmap grid behavior
+- **html2canvas patched** — postinstall script prevents crash on oklch colors
+- **dom-to-image-more** — replaced html2canvas for PNG export (native rendering, no oklch crash)
+- **Export filenames** — dynamically include theme, metric, and race limit
+- **Hydration fix** — inline flash-prevention script in `<head>`; dark mode state never read in SSR
+- **QOTD countdown timer** — "Next QOTD in Xh Xm" below badge, updated every 30s from midnight UTC
+- **Search/Refresh toggle** — button shows "Refresh" after search when fields unchanged
+- **API key slide animation** — `grid-template-rows` transition with toggle below the field
+- **UI gap standardization** — all vertical gaps set to `gap-2`
+
 ### v1.2.0 — QOTD fix, API key detection, grid layout
 
 - **QOTD hidden** for non-API / scrape results (no false "Not Done")
@@ -108,7 +130,8 @@ npm start
 
 ### Credits
 
-- **v1.1.0 and v1.2.0** built with [opencode](https://opencode.ai)'s **big-pickle** free model
+- **v1.3.0** built with [opencode](https://opencode.ai)'s **big-pickle** free model
+- **v1.1.0 and v1.2.0** built with opencode's **big-pickle** free model
 - **v1.0.0 and earlier** built with **DeepSeek V4 Flash low mode**
 
 ## Future Considerations
@@ -124,7 +147,7 @@ npm start
 - [Lucide Icons](https://lucide.dev/)
 - [PapaParse](https://www.papaparse.com/) — CSV parsing
 - [JSZip](https://stuk.github.io/jszip/) — ZIP extraction
-- [html2canvas](https://html2canvas.hertzen.com/) — chart / heatmap PNG export
+- [dom-to-image-more](https://github.com/tsayen/dom-to-image-more) — chart / heatmap PNG export (replaced html2canvas)
 
 ## License
 

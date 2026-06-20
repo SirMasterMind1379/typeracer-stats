@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Flame } from "lucide-react";
 import type { UserData } from "./types";
+import { formatDisplayDate } from "./types";
 
 /**
  * UserProfile — displays racer info, streaks, and QOTD.
@@ -72,6 +73,12 @@ export default function UserProfile({ data, dataSource }: { data: UserData; data
     return count;
   }, [data]);
 
+  const todayCount = useMemo(() => {
+    if (!data.races.length) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    return data.races.filter((r) => r.date.slice(0, 10) === today).length;
+  }, [data]);
+
   const activeStreak = streak > 0;
   const activeStreak10 = streak10 > 0;
   const staleStreak = streak === 0 && streakYesterday > 0;
@@ -104,6 +111,22 @@ export default function UserProfile({ data, dataSource }: { data: UserData; data
 
   const showStreaks = activeStreak || activeStreak10 || staleStreak || staleStreak10;
 
+  const [countdown, setCountdown] = useState("");
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+      const diff = next.getTime() - now.getTime();
+      if (diff <= 0) { setCountdown(""); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setCountdown(`Next QOTD in ${h}h ${m}m`);
+    }
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-beige-50 dark:bg-zinc-900 border border-beige-300 dark:border-zinc-700">
       <div>
@@ -132,7 +155,7 @@ export default function UserProfile({ data, dataSource }: { data: UserData; data
         </p>
         {data.joinedAt && (
           <p className="text-xs text-beige-600 dark:text-zinc-500 mt-1">
-            Joined {new Date(data.joinedAt).toLocaleDateString()}
+            Joined {formatDisplayDate(data.joinedAt)}
           </p>
         )}
         {data.note && (
@@ -175,7 +198,7 @@ export default function UserProfile({ data, dataSource }: { data: UserData; data
                 </span>
                 {staleStreak10 && (
                   <span className="text-[11px] text-beige-500 dark:text-zinc-500 ml-1">
-                    Not yet done today
+                    {todayCount >= 10 ? "Done today" : `${10 - todayCount} more needed`}
                   </span>
                 )}
               </span>
@@ -185,18 +208,23 @@ export default function UserProfile({ data, dataSource }: { data: UserData; data
       </div>
 
       {dataSource === "api" && (
-        <a
-          href="https://play.typeracer.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`px-3 py-1.5 text-sm font-medium border inline-block ${
-            data.qotdDone
-              ? "bg-red-50 dark:bg-red-950 border-red-700 text-red-800 dark:text-red-200"
-              : "bg-beige-50 dark:bg-zinc-800 border-beige-300 dark:border-zinc-600 text-beige-700 dark:text-zinc-400"
-          }`}
-        >
-          QOTD: {data.qotdDone ? "Done" : "Not Done"}
-        </a>
+        <div className="flex flex-col items-end gap-1">
+          <a
+            href="https://play.typeracer.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`px-3 py-1.5 text-sm font-medium border inline-block ${
+              data.qotdDone
+                ? "bg-red-50 dark:bg-red-950 border-red-700 text-red-800 dark:text-red-200"
+                : "bg-beige-50 dark:bg-zinc-800 border-beige-300 dark:border-zinc-600 text-beige-700 dark:text-zinc-400"
+            }`}
+          >
+            QOTD: {data.qotdDone ? "Done" : "Not Done"}
+          </a>
+          {countdown && (
+            <span className="text-[10px] text-beige-500 dark:text-zinc-500">{countdown}</span>
+          )}
+        </div>
       )}
     </div>
   );

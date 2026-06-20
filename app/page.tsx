@@ -402,7 +402,7 @@ export default function Home() {
                 >
                   Clear
                 </button>
-                <CsvExportButton data={data} allRaces={fullRaces} />
+                {dataSource === "api" && <CsvExportButton data={data} allRaces={fullRaces} />}
               </div>
             ) : (
               <DataImport onDataParsed={handleImport} />

@@ -134,6 +134,7 @@ npm start
 ## Future Considerations
 
 - **Session grouping** — group races into sessions by time gaps for per-session stats
+- **User script / browser extension** — real-time stats tracking overlay on play.typeracer.com using the existing API proxy and import logic
 
 ## Tech Stack
 

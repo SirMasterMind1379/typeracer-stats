@@ -1,5 +1,18 @@
-import { useState } from "react";
-import { Key, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Key, Eye, EyeOff, Save, Download } from "lucide-react";
+
+function setCookie(name: string, value: string, days = 365) {
+  if (typeof document === "undefined") return;
+  const d = new Date();
+  d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${d.toUTCString()}; path=/; SameSite=Lax`;
+}
+
+function getCookie(name: string): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : "";
+}
 
 export default function SearchForm({
   value,
@@ -20,11 +33,45 @@ export default function SearchForm({
 }) {
   const [showKey, setShowKey] = useState(false);
   const [showField, setShowField] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+
+  useEffect(() => {
+    if (!value && !apiKey) {
+      const savedUser = getCookie("tr_username");
+      const savedKey = getCookie("tr_api_key");
+      if (savedUser) onChange(savedUser);
+      if (savedKey) onApiKeyChange(savedKey);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit();
   };
+
+  const handleSave = () => {
+    if (value.trim() && apiKey.trim()) {
+      setCookie("tr_username", value.trim());
+      setCookie("tr_api_key", apiKey.trim());
+      setSaveMsg("Credentials saved to browser cookie");
+      setTimeout(() => setSaveMsg(""), 3000);
+    }
+  };
+
+  const handleLoad = () => {
+    const savedUser = getCookie("tr_username");
+    const savedKey = getCookie("tr_api_key");
+    if (savedUser) onChange(savedUser);
+    if (savedKey) onApiKeyChange(savedKey);
+    if (savedUser || savedKey) {
+      setSaveMsg("Loaded saved credentials from cookie");
+      setTimeout(() => setSaveMsg(""), 3000);
+    }
+  };
+
+  const hasCookieCreds = !!(getCookie("tr_username") || getCookie("tr_api_key"));
+  const canSave = value.trim() && apiKey.trim();
+  const canLoad = !canSave && hasCookieCreds;
 
   return (
     <form onSubmit={handleSubmit} className="max-w-xl mx-auto w-full flex flex-col gap-2">
@@ -89,7 +136,30 @@ export default function SearchForm({
             data.typeracer.com/pit/api_keys
           </a>
         </span>
+        {showField && (
+          <>
+            <button
+              type="button"
+              onClick={canSave ? handleSave : handleLoad}
+              className={`flex items-center gap-1 text-xs px-2 py-1 border ${
+                canSave
+                  ? "border-red-900 text-red-900 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950"
+                  : "border-beige-300 dark:border-zinc-600 text-beige-700 dark:text-zinc-400 hover:bg-beige-200 dark:hover:bg-zinc-800"
+              } ${!canSave && !canLoad ? "opacity-30 pointer-events-none" : ""}`}
+              disabled={!canSave && !canLoad}
+            >
+              {canSave ? <Save size={12} /> : <Download size={12} />}
+              <span className="ml-1">{canSave ? "Save" : "Load"} Credentials</span>
+            </button>
+          </>
+        )}
       </div>
+
+      {saveMsg && (
+        <p className="text-xs text-beige-700 dark:text-zinc-400 bg-beige-100 dark:bg-zinc-800 border border-beige-300 dark:border-zinc-700 px-3 py-2">
+          {saveMsg}
+        </p>
+      )}
     </form>
   );
 }

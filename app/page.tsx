@@ -515,7 +515,7 @@ export default function Home() {
                   </p>
                 </div>
 
-                {useDateLabels && dataSource === "api" && (
+                {useDateLabels && (
                   <div id="heatmap-export" className="bg-beige-50 dark:bg-zinc-900 border border-beige-300 dark:border-zinc-700 p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-beige-700 dark:text-zinc-400 uppercase tracking-wide">

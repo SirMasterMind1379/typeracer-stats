@@ -12,9 +12,9 @@ export default function UserProfile({ data, dataSource }: { data: UserData; data
   const profileUrl = `https://data.typeracer.com/pit/profile?user=${data.username}`;
 
   const streak = useMemo(() => computeStreak(data.races), [data]);
-  const streakYesterday = useMemo(() => computeStreak(data.races, { offsetDays: -1 }), [data]);
+  const streakYesterday = useMemo(() => computeStreak(data.races, { offsetDays: 1 }), [data]);
   const streak10 = useMemo(() => computeStreak(data.races, { minRaces: 10 }), [data]);
-  const streak10Yesterday = useMemo(() => computeStreak(data.races, { minRaces: 10, offsetDays: -1 }), [data]);
+  const streak10Yesterday = useMemo(() => computeStreak(data.races, { minRaces: 10, offsetDays: 1 }), [data]);
 
   const todayCount = useMemo(() => {
     if (!data.races.length) return 0;

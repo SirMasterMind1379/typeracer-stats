@@ -135,6 +135,21 @@ npm start
 
 - **Session grouping** — group races into sessions by time gaps for per-session stats
 - **User script / browser extension** — real-time stats tracking overlay on play.typeracer.com using the existing API proxy and import logic
+- **Race table/list view** — sortable, filterable table of individual races (mode, date, WPM, accuracy, points) so users can browse specific results
+- **Data caching** — store fetched API data in localStorage/IndexedDB so refreshing doesn't lose the dashboard state
+- **Pagination / load more races** — the API is hardcoded to 500 races; cursor-based pagination would support users with thousands of races
+- **Mode filtering** — filter races by type (multiplayer, room, QOTD) instead of always filtering out non-competitive ones
+- **Per-mode statistics** — separate breakdowns: multiplayer WPM vs room WPM vs QOTD WPM, with per-mode trends
+- **Date range picker** — calendar-based date range selection (complementary to chart drag zoom)
+- **Distribution histogram** — WPM and accuracy distribution charts (bell curve / histogram of all races)
+- **Goal tracking** — set target WPM/accuracy/race count and see progress bars + projected date to goal (can implement in userscript too)
+- **PWA support** — manifest + service worker for installable app, offline access to cached stats
+- **Loading skeletons** — skeleton placeholders for chart, heatmap, and stats cards instead of pulsing squares
+- **Keyboard accessibility** — ARIA labels, focus management, keyboard-navigable chart zoom
+- **Rivals / friends list** — track a set of users, see who's active, compare stats at a glance
+- **Milestone celebrations** — notification/toast when you cross a threshold (first 100WPM race, 1000th race, etc.)
+
+Disapproved feature proposals are documented in [DISAPPROVED_FEATURES.md](./DISAPPROVED_FEATURES.md).
 
 ## Tech Stack
 

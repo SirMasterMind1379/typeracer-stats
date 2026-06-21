@@ -108,44 +108,40 @@ export default function UserProfile({ data, dataSource }: { data: UserData; data
         {showStreaks && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
             {/* Streak (any races) */}
-            {(activeStreak || staleStreak) && (
-              <span className="inline-flex items-center gap-0.5">
-                <span className="text-[10px] font-semibold mr-0.5 text-beige-600 dark:text-zinc-500">S</span>
-                <span className={`inline-flex items-center gap-0.5 ${activeStreak ? flame.cls : greyCls}`}>
-                  {Array.from({ length: flame.count }, (_, i) => (
-                    <Flame key={i} size={flame.size} fill="currentColor" />
-                  ))}
-                  <span className="text-sm font-bold ml-0.5">
-                    {activeStreak ? streak : streakYesterday}
-                  </span>
+            <span className="inline-flex items-center gap-0.5">
+              <span className="text-[10px] font-semibold mr-0.5 text-beige-600 dark:text-zinc-500">S</span>
+              <span className={`inline-flex items-center gap-0.5 ${activeStreak ? flame.cls : greyCls}`}>
+                {Array.from({ length: flame.count }, (_, i) => (
+                  <Flame key={i} size={flame.size} fill="currentColor" />
+                ))}
+                <span className="text-sm font-bold ml-0.5">
+                  {activeStreak ? streak : streakYesterday}
                 </span>
-                {staleStreak && (
-                  <span className="text-[11px] text-beige-500 dark:text-zinc-500 ml-1">
-                    Not yet raced today
-                  </span>
-                )}
               </span>
-            )}
+              {staleStreak && (
+                <span className="text-[11px] text-beige-500 dark:text-zinc-500 ml-1">
+                  Not yet raced today
+                </span>
+              )}
+            </span>
 
             {/* Streak (10+ races/day) */}
-            {(activeStreak10 || staleStreak10) && (
-              <span className="inline-flex items-center gap-0.5">
-                <span className="text-[10px] font-semibold mr-0.5 text-beige-600 dark:text-zinc-500">10+</span>
-                <span className={`inline-flex items-center gap-0.5 ${activeStreak10 ? flame10.cls : greyCls}`}>
-                  {Array.from({ length: flame10.count }, (_, i) => (
-                    <Flame key={i} size={flame10.size} fill="currentColor" />
-                  ))}
-                  <span className="text-sm font-bold ml-0.5">
-                    {activeStreak10 ? streak10 : streak10Yesterday}
-                  </span>
+            <span className="inline-flex items-center gap-0.5">
+              <span className="text-[10px] font-semibold mr-0.5 text-beige-600 dark:text-zinc-500">10+</span>
+              <span className={`inline-flex items-center gap-0.5 ${activeStreak10 ? flame10.cls : greyCls}`}>
+                {Array.from({ length: flame10.count }, (_, i) => (
+                  <Flame key={i} size={flame10.size} fill="currentColor" />
+                ))}
+                <span className="text-sm font-bold ml-0.5">
+                  {activeStreak10 ? streak10 : streak10Yesterday}
                 </span>
-                {staleStreak10 && (
-                  <span className="text-[11px] text-beige-500 dark:text-zinc-500 ml-1">
-                    {todayCount >= 10 ? "Done today" : `${10 - todayCount} more needed`}
-                  </span>
-                )}
               </span>
-            )}
+              {staleStreak10 && (
+                <span className="text-[11px] text-beige-500 dark:text-zinc-500 ml-1">
+                  {todayCount >= 10 ? "Done today" : `${10 - todayCount} more needed`}
+                </span>
+              )}
+            </span>
           </div>
         )}
       </div>

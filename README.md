@@ -148,6 +148,8 @@ npm start
 - **Keyboard accessibility** — ARIA labels, focus management, keyboard-navigable chart zoom
 - **Rivals / friends list** — track a set of users, see who's active, compare stats at a glance
 - **Milestone celebrations** — notification/toast when you cross a threshold (first 100WPM race, 1000th race, etc.)
+- **Auto-refresh toggle** — polls the API every minute to detect and log new races without manual refresh
+- **Text discovery counter** — shows how many unique text IDs you've encountered out of the total TypeRacer text library, based on the `textId` field from API or CSV import data
 
 Disapproved feature proposals are documented in [DISAPPROVED_FEATURES.md](./DISAPPROVED_FEATURES.md).
 

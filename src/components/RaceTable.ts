@@ -114,9 +114,13 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
                   <span class="px-1.5 py-0.5 text-[10px] uppercase border ${
                     r.mode?.toLowerCase().includes("qotd")
                       ? "border-amber-600 bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300"
+                      : r.mode?.toLowerCase().includes("room")
+                      ? "border-purple-600 bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-300"
+                      : r.mode?.toLowerCase().includes("practice") || (r.totalRacers <= 1 && !r.mode)
+                      ? "border-blue-600 bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-300"
                       : "border-beige-300 dark:border-beige-700 bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-300"
                   }">
-                    ${r.mode || "multiplayer"}
+                    ${r.mode || (r.totalRacers <= 1 ? "practice" : "multiplayer")}
                   </span>
                 </td>
                 <td class="py-2 px-3 font-semibold text-beige-900 dark:text-beige-100">${r.speed.toFixed(1)}</td>

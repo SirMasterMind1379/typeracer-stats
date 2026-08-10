@@ -11,6 +11,7 @@ import { renderRaceTable } from "./components/RaceTable";
 import { renderExportButton } from "./components/ExportButton";
 import { renderCsvExportButton } from "./components/CsvExportButton";
 import { renderErrorBanner } from "./components/ErrorBanner";
+import { renderModeComparison, categorizeRaceMode } from "./components/ModeComparison";
 import type { UserData, Race, Metric, TimeframeStats as TStats } from "./types";
 import { formatDisplayDate, isCompetitiveRace, sortByDate, getCookie } from "./types";
 import { getCachedRaces, saveCachedRaces, getCachedProfile, saveCachedProfile } from "./db";
@@ -29,6 +30,7 @@ class App {
   private error = "";
 
   private selectedMetric: Metric = "speed";
+  private selectedModeFilter: string = "all";
   private raceLimit: number | null = null;
   private dark = false;
 
@@ -244,13 +246,21 @@ class App {
     }, 300);
   }
 
+  /* ── Mode Filtering Helper ── */
+  private getFilteredRaces(): Race[] {
+    if (!this.data) return [];
+    if (this.selectedModeFilter === "all") return this.data.races;
+    return this.data.races.filter((r) => categorizeRaceMode(r) === this.selectedModeFilter);
+  }
+
   /* ── Calculations ── */
   private getDerivedData() {
     if (!this.data) return null;
 
-    const useDateLabels = this.data.races.length > 0 && this.data.races.some((r) => !isNaN(new Date(r.date).getTime()));
+    const activeRaces = this.getFilteredRaces();
+    const useDateLabels = activeRaces.length > 0 && activeRaces.some((r) => !isNaN(new Date(r.date).getTime()));
 
-    const allChartData = sortByDate(this.data.races).map((r, i) => ({
+    const allChartData = sortByDate(activeRaces).map((r, i) => ({
       ...r,
       dateLabel: useDateLabels ? formatDisplayDate(r.date) : `Race ${i + 1}`,
       ts: useDateLabels ? new Date(r.date).getTime() : i,
@@ -378,13 +388,47 @@ class App {
       // Stats Cards
       container.appendChild(renderStatsCards(this.data));
 
+      // Mode Comparison Breakdown
+      container.appendChild(
+        renderModeComparison(this.data.races, (modeKey) => {
+          this.selectedModeFilter = modeKey;
+          this.render();
+        })
+      );
+
       if (this.data.races.length > 0 && derived) {
-        // Controls Row: Metric & Race Limit buttons
+        // Controls Row: Mode Filter, Metric & Race Limit buttons
         const controls = document.createElement("div");
         controls.className = "flex flex-wrap items-center justify-between gap-3";
 
         const btnGroup = document.createElement("div");
-        btnGroup.className = "flex gap-2 flex-wrap";
+        btnGroup.className = "flex gap-2 flex-wrap items-center";
+
+        // Mode Filter Pills
+        const modeOpts: { key: string; label: string }[] = [
+          { key: "all", label: "All Modes" },
+          { key: "multiplayer", label: "Multiplayer" },
+          { key: "practice_qotd", label: "Practice / QOTD" },
+          { key: "room", label: "Custom Rooms" },
+        ];
+        modeOpts.forEach((opt) => {
+          const btn = document.createElement("button");
+          btn.className = `px-2.5 py-1.5 text-xs font-medium border cursor-pointer ${
+            this.selectedModeFilter === opt.key
+              ? "bg-red-900 text-beige-50 border-red-900 font-bold"
+              : "bg-beige-100 dark:bg-beige-900 border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100"
+          }`;
+          btn.textContent = opt.label;
+          btn.addEventListener("click", () => {
+            this.selectedModeFilter = opt.key;
+            this.render();
+          });
+          btnGroup.appendChild(btn);
+        });
+
+        const modeDivider = document.createElement("span");
+        modeDivider.className = "w-px h-5 bg-beige-300 dark:bg-beige-700 mx-1";
+        btnGroup.appendChild(modeDivider);
 
         // Metrics
         (["speed", "accuracy", "points", "wins"] as Metric[]).forEach((m) => {
@@ -535,7 +579,7 @@ class App {
           hmHeader.appendChild(renderExportButton("heatmap-export", `heatmap_${themeStr}.png`));
           heatmapBox.appendChild(hmHeader);
 
-          heatmapBox.appendChild(renderActivityHeatmap({ races: this.data.races, dark: this.dark }));
+          heatmapBox.appendChild(renderActivityHeatmap({ races: this.getFilteredRaces(), dark: this.dark }));
 
           const legend = document.createElement("div");
           legend.className = "flex items-center justify-center gap-1 mt-2 text-[10px] text-beige-600 dark:text-beige-400";
@@ -555,7 +599,7 @@ class App {
         }
 
         // Sortable Race History Table
-        container.appendChild(renderRaceTable({ races: this.data.races }));
+        container.appendChild(renderRaceTable({ races: this.getFilteredRaces() }));
       }
     }
 

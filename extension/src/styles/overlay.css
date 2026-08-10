@@ -1,0 +1,387 @@
+/* TypeRacer Stats Overlay - ShadowDOM Styles */
+:host {
+  all: initial;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.tr-overlay-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  width: 340px;
+  background: rgba(22, 18, 20, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 15px rgba(185, 28, 28, 0.15);
+  color: #f3f4f6;
+  font-size: 13px;
+  overflow: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  user-select: none;
+}
+
+.tr-overlay-container.collapsed .tr-overlay-body {
+  display: none;
+}
+
+.tr-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(158, 27, 36, 0.8), rgba(22, 18, 20, 0.95));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: move;
+}
+
+.tr-overlay-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+}
+
+.tr-overlay-title .tr-logo-badge {
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.tr-overlay-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tr-icon-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #d1d5db;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tr-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.tr-overlay-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar */
+.tr-overlay-body::-webkit-scrollbar {
+  width: 4px;
+}
+.tr-overlay-body::-webkit-scrollbar-thumb {
+  background: rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+}
+
+/* Section Card */
+.tr-card {
+  background: rgba(30, 26, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.tr-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Quote Recognition Banner */
+.tr-quote-banner {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.tr-quote-banner.new-text {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.tr-quote-banner.repeat-text {
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  color: #facc15;
+}
+
+.tr-quote-stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #e5e7eb;
+}
+
+/* Delta Comparison Pill */
+.tr-delta-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  animation: slideInDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tr-delta-pill.gain {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.tr-delta-pill.loss {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+/* Streak Progress */
+.tr-streak-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tr-streak-val {
+  font-weight: 700;
+  color: #f87171;
+}
+
+.tr-progress-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.tr-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444, #f97316);
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tr-streak-msg {
+  font-size: 11px;
+  color: #d1d5db;
+}
+
+/* QOTD & Countdown */
+.tr-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.tr-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tr-badge.done {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.tr-badge.pending {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.tr-timer {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+/* Last 10 Races List */
+.tr-races-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.tr-race-item {
+  display: grid;
+  grid-template-columns: 24px 1fr 60px 50px;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  font-size: 11px;
+  transition: transform 0.25s ease, opacity 0.25s ease, background 0.15s ease;
+}
+
+.tr-race-item.new-item {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tr-race-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tr-race-num {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.tr-race-wpm {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.tr-race-acc {
+  color: #9ca3af;
+  text-align: right;
+}
+
+.tr-race-rank {
+  text-align: right;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.tr-race-rank.win {
+  color: #4ade80;
+}
+
+/* Sparkline Container */
+.tr-sparkline-box {
+  height: 40px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.tr-sparkline-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Settings Toggle */
+.tr-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #d1d5db;
+  padding: 4px 0;
+}
+
+.tr-switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+
+.tr-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.tr-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: .2s;
+  border-radius: 18px;
+}
+
+.tr-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .2s;
+  border-radius: 50%;
+}
+
+input:checked + .tr-slider {
+  background-color: #ef4444;
+}
+
+input:checked + .tr-slider:before {
+  transform: translateX(14px);
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-15px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

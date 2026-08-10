@@ -23,6 +23,8 @@ The helper `formatDisplayDate()` in `src/types.ts` implements this. Use it where
 
 ## Git & Deployment Workflow Policy
 - **No Unsolicited Git Pushes / Vercel Checks**: Do NOT run `git push`, push changes to GitHub, or perform Vercel web app deployment checks unless explicitly asked by the user, or when `/git-release` is invoked. Keep routine work focused strictly on local file edits and local verification (`http://localhost:1384`).
+- **Relative Base Path (`base: './'`)**: Always maintain `base: './'` in `vite.config.ts` so bundled HTML assets use relative paths (`./assets/...`), ensuring 100% compatibility across both GitHub Pages subpaths and Vercel root URLs.
+- **CI Runner Standard**: Maintain `node-version: 22` in `.github/workflows/deploy.yml` and keep `package-lock.json` synchronized via `npm install`.
 
 ## Windows Vite 6 & Tailwind v4 CSS Handling
 - **No PostCSS Files**: Do NOT create `postcss.config.*` files or add `"postcss"` keys to `package.json`. Tailwind CSS v4 is handled natively via `@tailwindcss/vite`.

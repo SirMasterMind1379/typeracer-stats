@@ -29,11 +29,13 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
   let saveMsg = "";
 
   // Auto-expand API Key field if key exists
-  let showField = !!(props.apiKey || getCookie("tr_api_key"));
+  let showField = !!props.apiKey;
 
   function update() {
-    const usernameVal = props.value || getCookie("tr_username");
-    const apiKeyVal = props.apiKey || getCookie("tr_api_key");
+    const usernameVal = props.value;
+    const apiKeyVal = props.apiKey;
+
+    const hasSavedCredentials = !!(getCookie("tr_username") || getCookie("tr_api_key"));
 
     form.innerHTML = `
       <div class="flex gap-3">
@@ -60,23 +62,34 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
         style="grid-template-rows: ${showField ? "1fr" : "0fr"}"
       >
         <div class="overflow-hidden">
-          <div class="relative pt-1">
-            <input
-              id="apikey-input"
-              type="${showKey ? "text" : "password"}"
-              name="apikey"
-              autocomplete="current-password"
-              value="${escapeHtml(apiKeyVal)}"
-              placeholder="Your TypeRacer API key..."
-              class="w-full p-3 pr-10 border border-beige-300 dark:border-beige-700 bg-beige-100 dark:bg-beige-900 text-beige-900 dark:text-beige-100 text-sm font-mono focus:outline-none focus:border-red-900 dark:focus:border-red-500"
-            />
-            <button
-              id="toggle-eye-btn"
-              type="button"
-              class="absolute right-3 top-[calc(50%+2px)] -translate-y-1/2 text-beige-600 dark:text-beige-400 hover:text-beige-900 dark:hover:text-beige-200 cursor-pointer"
-            >
-              ${showKey ? eyeOffSvg() : eyeSvg()}
-            </button>
+          <div class="pt-1 flex flex-col gap-2">
+            <div class="relative">
+              <input
+                id="apikey-input"
+                type="${showKey ? "text" : "password"}"
+                name="apikey"
+                autocomplete="current-password"
+                value="${escapeHtml(apiKeyVal)}"
+                placeholder="Your TypeRacer API key..."
+                class="w-full p-3 pr-10 border border-beige-300 dark:border-beige-700 bg-beige-100 dark:bg-beige-900 text-beige-900 dark:text-beige-100 text-sm font-mono focus:outline-none focus:border-red-900 dark:focus:border-red-500"
+              />
+              <button
+                id="toggle-eye-btn"
+                type="button"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-beige-600 dark:text-beige-400 hover:text-beige-900 dark:hover:text-beige-200 cursor-pointer"
+              >
+                ${showKey ? eyeOffSvg() : eyeSvg()}
+              </button>
+            </div>
+            <div class="flex justify-end">
+              <button
+                id="save-cookie-btn"
+                type="button"
+                class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border-2 border-red-800 dark:border-red-700 bg-white dark:bg-beige-900 text-red-900 dark:text-red-400 hover:bg-red-800 hover:text-white dark:hover:bg-red-800 dark:hover:text-white cursor-pointer transition-colors shadow-xs"
+              >
+                Remember credentials
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -102,13 +115,17 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
           </span>
         </div>
 
-        <button
-          id="save-cookie-btn"
-          type="button"
-          class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border-2 border-red-800 dark:border-red-700 bg-white dark:bg-beige-900 text-red-900 dark:text-red-400 hover:bg-red-800 hover:text-white dark:hover:bg-red-800 dark:hover:text-white cursor-pointer transition-colors shadow-xs"
-        >
-          Remember credentials
-        </button>
+        ${
+          hasSavedCredentials
+            ? `<button
+                id="clear-cookie-btn"
+                type="button"
+                class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border border-beige-300 dark:border-beige-700 bg-beige-100 dark:bg-beige-900 text-beige-700 dark:text-beige-300 hover:bg-red-900 hover:text-white dark:hover:bg-red-800 dark:hover:text-white cursor-pointer transition-colors"
+              >
+                Clear credentials
+              </button>`
+            : ""
+        }
       </div>
 
       ${
@@ -153,6 +170,14 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
       if (u) setCookie("tr_username", u);
       if (k) setCookie("tr_api_key", k);
       saveMsg = "Credentials saved to browser cookie";
+      update();
+      setTimeout(() => { saveMsg = ""; update(); }, 3000);
+    });
+
+    form.querySelector("#clear-cookie-btn")?.addEventListener("click", () => {
+      setCookie("tr_username", "", -1);
+      setCookie("tr_api_key", "", -1);
+      saveMsg = "Saved credentials cleared from browser cookie";
       update();
       setTimeout(() => { saveMsg = ""; update(); }, 3000);
     });

@@ -82,11 +82,11 @@ class App {
     this.fullRaces = [];
     this.dataSource = null;
 
-    // Read current DOM input values if state hasn't been set
-    const domUser = (document.getElementById("username-input") as HTMLInputElement)?.value || "";
-    const domKey = (document.getElementById("apikey-input") as HTMLInputElement)?.value || "";
-    let username = (this.input || domUser || getCookie("tr_username")).trim();
-    const key = (this.apiKey || domKey || getCookie("tr_api_key")).trim();
+    // Read current DOM input values
+    const domUser = (document.getElementById("username-input") as HTMLInputElement)?.value;
+    const domKey = (document.getElementById("apikey-input") as HTMLInputElement)?.value;
+    let username = (domUser !== undefined ? domUser : this.input).trim();
+    const key = (domKey !== undefined ? domKey : this.apiKey).trim();
 
     const match = username.match(/typeracer\.com\/pit\/(?:profile|racer)\?user=(\w+)/);
     if (match) username = match[1];

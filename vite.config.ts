@@ -3,6 +3,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [tailwindcss()],
+  css: {
+    postcss: false,
+  },
   server: {
     port: 1384,
     proxy: {
@@ -13,6 +16,6 @@ export default defineConfig({
     },
   },
   define: {
-    'process.env.APP_VERSION': JSON.stringify('1.5.0'),
+    'process.env.APP_VERSION': JSON.stringify('2.0.0'),
   },
 });

@@ -122,7 +122,7 @@ export function renderModeComparison(races: Race[], onSelectMode?: (modeKey: str
   stats.forEach((mode) => {
     const card = document.createElement("div");
     card.className =
-      "bg-beige-50 dark:bg-beige-950 border border-beige-300 dark:border-beige-800 p-3 flex flex-col justify-between hover:border-red-900/50 dark:hover:border-red-500/50 transition-colors cursor-pointer";
+      "bg-beige-200/50 dark:bg-beige-800/50 border border-beige-300 dark:border-beige-700 p-3 flex flex-col justify-between hover:border-red-900/50 dark:hover:border-red-500/50 transition-colors cursor-pointer";
 
     if (onSelectMode) {
       card.addEventListener("click", () => onSelectMode(mode.key));
@@ -133,7 +133,7 @@ export function renderModeComparison(races: Race[], onSelectMode?: (modeKey: str
         <span class="text-sm font-semibold text-beige-900 dark:text-beige-100 flex items-center gap-1.5">
           <span>${mode.icon}</span> ${mode.name}
         </span>
-        <span class="px-1.5 py-0.5 text-[10px] font-mono bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-200 border border-beige-300 dark:border-beige-700">
+        <span class="px-1.5 py-0.5 text-[10px] font-mono bg-beige-300/60 dark:bg-beige-700/60 text-beige-900 dark:text-beige-100 border border-beige-300 dark:border-beige-600">
           ${mode.sharePercent}% share
         </span>
       </div>

@@ -388,14 +388,6 @@ class App {
       // Stats Cards
       container.appendChild(renderStatsCards(this.data));
 
-      // Mode Comparison Breakdown
-      container.appendChild(
-        renderModeComparison(this.data.races, (modeKey) => {
-          this.selectedModeFilter = modeKey;
-          this.render();
-        })
-      );
-
       if (this.data.races.length > 0 && derived) {
         // Controls Row: Mode Filter, Metric & Race Limit buttons
         const controls = document.createElement("div");
@@ -600,6 +592,14 @@ class App {
 
         // Sortable Race History Table
         container.appendChild(renderRaceTable({ races: this.getFilteredRaces() }));
+
+        // Mode Comparison Breakdown (Bottom of page under charts & table)
+        container.appendChild(
+          renderModeComparison(this.data.races, (modeKey) => {
+            this.selectedModeFilter = modeKey;
+            this.render();
+          })
+        );
       }
     }
 

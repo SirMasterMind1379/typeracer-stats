@@ -1,4 +1,18 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+export interface VercelRequest {
+  method?: string;
+  body?: any;
+  query?: Record<string, string | string[]>;
+  headers?: Record<string, string | string[] | undefined>;
+}
+
+export interface VercelResponse {
+  status: (statusCode: number) => VercelResponse;
+  json: (body: any) => VercelResponse;
+  send: (body: any) => VercelResponse;
+  setHeader: (name: string, value: string) => VercelResponse;
+  end: () => VercelResponse;
+}
+
 
 const API_BASE = "https://data.typeracer.com/api";
 

@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+@layer utilities {
+  @keyframes pulse-square {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.85); }
+  }
+  .animate-pulse-square {
+    animation: pulse-square 1.2s ease-in-out infinite;
+  }
+
+  @keyframes draw-line {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .animate-line-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: draw-line 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes bar-grow {
+    from {
+      transform: scaleY(0);
+      transform-origin: bottom;
+    }
+    to {
+      transform: scaleY(1);
+      transform-origin: bottom;
+    }
+  }
+  .animate-bar-grow {
+    animation: bar-grow 0.45s ease-out forwards;
+  }
+}
+
+@theme {
+  --color-beige-50: #fdf8ea;   /* Page background light: Warm sunny cream */
+  --color-beige-100: #ffffff;  /* Card background light: Pure white */
+  --color-beige-200: #f5edd8;  /* Hover state light */
+  --color-beige-300: #e8d8bc;  /* Border light: Warm golden-tan border */
+  --color-beige-600: #9e8d76;  /* Subtle text light */
+  --color-beige-700: #7c6f5a;  /* Secondary text light: Warm bronze-grey */
+  --color-beige-800: #382a2c;  /* Dark card border */
+  --color-beige-900: #241e20;  /* Dark card background */
+  --color-red-50: #fff5f5;
+  --color-red-100: #fde8e8;
+  --color-red-200: #fbd0d0;
+  --color-red-400: #f57171;
+  --color-red-500: #e53e3e;
+  --color-red-600: #c52228;
+  --color-red-700: #a71d22;
+  --color-red-800: #800000;   /* Selected button: Deep crimson red */
+  --color-red-900: #800000;   /* Selected button: Deep crimson red */
+  --color-red-950: #420c0e;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #fdf8ea; /* Warm sunny cream background */
+  color: #222222; /* Dark charcoal text */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.dark body {
+  background-color: #161214; /* Dark grey velvet background */
+  color: #fdf8ea; /* Light cream text */
+}

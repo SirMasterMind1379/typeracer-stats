@@ -1,0 +1,126 @@
+/** A single typing race result. */
+export interface Race {
+  id: string;
+  /** ISO date string of when the race occurred. */
+  date: string;
+  /** Typing speed in WPM. */
+  speed: number;
+  /** Accuracy as a percentage (0–100). */
+  accuracy: number;
+  /** Points earned from this race. */
+  points: number | null;
+  /** Finishing rank (1 = first). */
+  rank: number;
+  /** Number of racers in the session. */
+  totalRacers: number;
+  /** Identifier for the text typed. */
+  textId: number;
+  /** Whether the user placed first. */
+  won: boolean;
+  /** Race mode (e.g., "multiplayer", "room", "qotd"). */
+  mode?: string;
+}
+
+/** Aggregate stats for a universe (scrape or API). */
+export interface Stats {
+  totalRaces: number;
+  totalWins?: number;
+  points?: number | null;
+  avgWpm: number | null;
+  bestWpm: number | null;
+  certWpm?: number | null;
+  /** Typist level from scraped profile (e.g. "Typist 5"). */
+  typistLevel?: string | null;
+}
+
+/** Full response from the user-stats API. */
+export interface UserData {
+  username: string;
+  name: string;
+  joinedAt: string | null;
+  premium: boolean;
+  /** Badge IDs scraped from the profile page. */
+  badges?: string[];
+  stats: Stats | null;
+  races: Race[];
+  qotdDone: boolean;
+  note?: string;
+}
+
+/** Which metric is currently selected for the chart. */
+export type Metric = "speed" | "accuracy" | "points" | "wins";
+
+const MONTH_ABBR: Record<number, string> = {
+  0: "JA", 1: "FE", 2: "MR", 3: "AP", 4: "MA", 5: "JN",
+  6: "JL", 7: "AG", 8: "SE", 9: "OC", 10: "NV", 11: "DE",
+};
+
+export function formatDisplayDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const mo = MONTH_ABBR[d.getMonth()];
+  const dd = String(d.getDate()).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${mo}/${dd}/${yyyy}`;
+}
+
+/** Computed stats for the currently visible timeframe. */
+export interface TimeframeStats {
+  races: number;
+  avgSpeed: string;
+  avgAcc: string;
+  wins: number;
+  totalPoints: string;
+  winRate: string;
+}
+
+/** Whether a race is "competitive" (multiplayer, not QOTD). */
+export function isCompetitiveRace(r: Race): boolean {
+  return (r.totalRacers ?? 0) > 1 || (!!r.mode && !r.mode.toLowerCase().includes("qotd"));
+}
+
+/** Sort races chronologically by date. */
+export function sortByDate(races: Race[]): Race[] {
+  return [...races].sort((a, b) => {
+    const da = new Date(a.date.replace(" ", "T")).getTime();
+    const db = new Date(b.date.replace(" ", "T")).getTime();
+    if (!isNaN(da) && !isNaN(db)) return da - db;
+    return 0;
+  });
+}
+
+/** Compute consecutive-day streak with optional threshold and offset. */
+export function computeStreak(
+  races: Race[],
+  options?: { minRaces?: number; offsetDays?: number },
+): number {
+  if (!races.length) return 0;
+  const { minRaces = 1, offsetDays = 0 } = options ?? {};
+  const counts = new Map<string, number>();
+  for (const r of races) {
+    const key = r.date.slice(0, 10);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  let count = 0;
+  const d = new Date();
+  d.setDate(d.getDate() - offsetDays);
+  const threshold = minRaces > 1 ? minRaces : 1;
+  while ((counts.get(d.toISOString().slice(0, 10)) || 0) >= threshold) {
+    count++;
+    d.setDate(d.getDate() - 1);
+  }
+  return count;
+}
+
+export function getCookie(name: string): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+export function setCookie(name: string, value: string, days = 365) {
+  if (typeof document === "undefined") return;
+  const d = new Date();
+  d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${d.toUTCString()}; path=/; SameSite=Lax`;
+}

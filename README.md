@@ -3,11 +3,16 @@
 > **Production-Grade TypeRacer Analytics & Race History Visualizer**  
 > Built with Pure Vanilla TypeScript, Vite 6, Tailwind CSS v4, and Native API Proxying. Zero heavy UI frameworks.
 
-[![Version](https://img.shields.io/badge/version-2.0.0-c52228.svg)](https://github.com/SirMasterMind1379/typeracer-stats/releases)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)]()
+[![Live Demo on Vercel](https://img.shields.io/badge/Vercel_Deployment-Live_Demo-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://typeracer-stats.vercel.app)
+[![Live Demo on GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Live_Demo-222222?style=for-the-badge&logo=github&logoColor=white)](https://sirmastermind1379.github.io/typeracer-stats/)
 
 ---
+
+### 🌐 Try the Live Deployments
+
+- 🚀 **Vercel Deployment (Full Serverless Proxy)**: [https://typeracer-stats.vercel.app](https://typeracer-stats.vercel.app)
+- ⚡ **GitHub Pages Deployment**: [https://sirmastermind1379.github.io/typeracer-stats/](https://sirmastermind1379.github.io/typeracer-stats/)
+
 
 ## ✨ Features & Highlights
 

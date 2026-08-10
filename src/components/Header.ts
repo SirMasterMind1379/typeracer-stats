@@ -11,7 +11,7 @@ export function renderHeader(dark: boolean, onToggle: () => void): HTMLElement {
         rel="noopener noreferrer"
         class="ml-2 text-xs font-normal text-beige-600 dark:text-beige-400 hover:text-beige-800 dark:hover:text-beige-200 align-baseline"
       >
-        v2.0.0
+        v2.0.1
       </a>
     </h1>
     <div class="flex items-center gap-2">

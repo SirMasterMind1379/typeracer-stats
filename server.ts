@@ -101,10 +101,11 @@ Bun.serve({
           });
         }
 
-        const [racerRes, statsRes, racesRes] = await Promise.all([
+        const [racerRes, statsRes, racesRes, scrapeData] = await Promise.all([
           fetchFromTR(`/v1/racers/${username}?universe=play`, effectiveUsername, effectiveKey),
           fetchFromTR(`/v1/racers/${username}/stats?universe=play`, effectiveUsername, effectiveKey),
           fetchFromTR(`/v1/racers/${username}/races?universe=play&n=500`, effectiveUsername, effectiveKey),
+          scrapeProfile(username),
         ]);
 
         if (!racerRes.success && (racerRes.status === 401 || racerRes.error?.includes('401'))) {
@@ -148,12 +149,38 @@ Bun.serve({
             mode: r.mode || r.gn || r.game_mode || undefined,
           }));
 
-        const totalRaces = apiStats?.total_races ?? apiStats?.totalRaces ?? races.length ?? 0;
-        const totalWins = apiStats?.total_wins ?? apiStats?.totalWins;
+        console.log('[debug] statsRes.data:', JSON.stringify(statsRes.data));
+        console.log('[debug] racerRes.data:', JSON.stringify(racerRes.data));
+        console.log('[debug] apiStats:', JSON.stringify(apiStats));
+        console.log('[debug] sample race[0]:', JSON.stringify(rawRaces[0]));
+
+        let totalRaces = apiStats?.total_races ?? apiStats?.totalRaces ?? apiStats?.numRaces ?? apiStats?.num_races ?? null;
+        let totalWins = apiStats?.total_wins ?? apiStats?.totalWins ?? apiStats?.num_wins ?? apiStats?.numWins ?? null;
         const statsPoints = apiStats?.points ?? null;
-        const avgWpm = apiStats?.avg_wpm ?? apiStats?.avgWpm;
-        const bestWpm = apiStats?.best_wpm ?? apiStats?.bestWpm;
+        let avgWpm = apiStats?.avg_wpm ?? apiStats?.avgWpm ?? apiStats?.wpm_average ?? apiStats?.averageWpm ?? null;
+        let bestWpm = apiStats?.best_wpm ?? apiStats?.bestWpm ?? apiStats?.wpm_best ?? apiStats?.bestRaceWpm ?? null;
         const certWpm = apiStats?.cert_wpm ?? apiStats?.certWpm ?? null;
+
+        // Fallback: fill missing stats from scrape, then from fetched races
+        if (scrapeData?.stats) {
+          const sc = scrapeData.stats;
+          if ((totalRaces == null || totalRaces === 0) && sc.totalRaces > 0) totalRaces = sc.totalRaces;
+          if ((avgWpm == null || avgWpm === 0) && sc.avgWpm != null) avgWpm = sc.avgWpm;
+          if ((bestWpm == null || bestWpm === 0) && sc.bestWpm != null) bestWpm = sc.bestWpm;
+        }
+        if (races.length > 0) {
+          if (totalRaces == null || totalRaces === 0) totalRaces = races.length;
+          if (avgWpm == null || avgWpm === 0) {
+            const sum = races.reduce((s: number, r: any) => s + (r.speed || 0), 0);
+            avgWpm = parseFloat((sum / races.length).toFixed(2));
+          }
+          if (bestWpm == null || bestWpm === 0) {
+            bestWpm = Math.max(...races.map((r: any) => r.speed || 0));
+          }
+          if (totalWins == null) {
+            totalWins = races.filter((r: any) => r.won).length;
+          }
+        }
 
         let qotdDone = false;
         const today = new Date().toISOString().slice(0, 10);
@@ -173,16 +200,17 @@ Bun.serve({
         if (!qotdDone) {
           qotdDone = races.some((r: any) => {
             if (!r.date) return false;
-            return r.date.slice(0, 10) === today && r.mode && r.mode.toLowerCase().includes('qotd');
+            const mode = (r.mode || r.gn || r.game_mode || '').toLowerCase();
+            return r.date.slice(0, 10) === today && (mode.includes('qotd') || mode === 'daily' || mode === 'competition');
           });
         }
 
         return Response.json({
           username,
-          name: racer?.name || username,
+          name: racer?.name || scrapeData?.name || username,
           joinedAt: racer?.joined_at || null,
-          premium: racer?.premium || false,
-          badges: racer?.badges || [],
+          premium: racer?.premium ?? scrapeData?.premium ?? false,
+          badges: racer?.badges || scrapeData?.badges || [],
           stats: {
             totalRaces,
             totalWins,

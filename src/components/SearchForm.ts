@@ -28,14 +28,21 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
   let showKey = false;
   let saveMsg = "";
 
+  // Local mutable copies of the input values — survive re-renders (e.g. eye toggle)
+  let currentUsername = props.value;
+  let currentApiKey = props.apiKey;
+
   // Auto-expand API Key field if key exists
   let showField = !!props.apiKey;
 
   function update() {
-    const usernameVal = props.value;
-    const apiKeyVal = props.apiKey;
+    const usernameVal = currentUsername;
+    const apiKeyVal = currentApiKey;
 
-    const hasSavedCredentials = !!(getCookie("tr_username") || getCookie("tr_api_key"));
+    const savedUsername = getCookie("tr_username");
+    const savedApiKey = getCookie("tr_api_key");
+    const hasSavedCredentials = !!(savedUsername || savedApiKey);
+    const credentialsMatch = usernameVal === savedUsername && apiKeyVal === savedApiKey;
 
     form.innerHTML = `
       <div class="flex gap-3">
@@ -81,14 +88,29 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
                 ${showKey ? eyeOffSvg() : eyeSvg()}
               </button>
             </div>
-            <div class="flex justify-end">
+            <div class="flex justify-end gap-2">
               <button
                 id="save-cookie-btn"
                 type="button"
-                class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border-2 border-red-800 dark:border-red-700 bg-white dark:bg-beige-900 text-red-900 dark:text-red-400 hover:bg-red-800 hover:text-white dark:hover:bg-red-800 dark:hover:text-white cursor-pointer transition-colors shadow-xs"
+                ${credentialsMatch ? "disabled" : ""}
+                class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border-2 border-red-800 dark:border-red-700 bg-white dark:bg-beige-900 text-red-900 dark:text-red-400 hover:bg-red-800 hover:text-white dark:hover:bg-red-800 dark:hover:text-white cursor-pointer transition-colors shadow-xs disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-red-900 dark:disabled:hover:bg-beige-900 dark:disabled:hover:text-red-400"
               >
                 Remember credentials
               </button>
+              ${hasSavedCredentials ? `<button
+                id="load-cookie-btn"
+                type="button"
+                class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border border-beige-400 dark:border-beige-600 bg-beige-100 dark:bg-beige-900 text-beige-700 dark:text-beige-300 hover:bg-beige-200 dark:hover:bg-beige-800 cursor-pointer transition-colors"
+              >
+                Load credentials
+              </button>` : ""}
+              ${hasSavedCredentials ? `<button
+                id="clear-cookie-btn"
+                type="button"
+                class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border border-beige-300 dark:border-beige-700 bg-beige-100 dark:bg-beige-900 text-beige-700 dark:text-beige-300 hover:bg-red-900 hover:text-white dark:hover:bg-red-800 dark:hover:text-white cursor-pointer transition-colors"
+              >
+                Clear credentials
+              </button>` : ""}
             </div>
           </div>
         </div>
@@ -114,18 +136,6 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
             >data.typeracer.com/pit/api_keys</a>
           </span>
         </div>
-
-        ${
-          hasSavedCredentials
-            ? `<button
-                id="clear-cookie-btn"
-                type="button"
-                class="flex items-center gap-1.5 text-xs px-3 py-1 font-semibold border border-beige-300 dark:border-beige-700 bg-beige-100 dark:bg-beige-900 text-beige-700 dark:text-beige-300 hover:bg-red-900 hover:text-white dark:hover:bg-red-800 dark:hover:text-white cursor-pointer transition-colors"
-              >
-                Clear credentials
-              </button>`
-            : ""
-        }
       </div>
 
       ${
@@ -142,16 +152,20 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
     userInput?.addEventListener("input", (e) => {
       const v = (e.target as HTMLInputElement).value;
       if (/^[a-zA-Z0-9]{32}$/.test(v.trim())) {
+        currentApiKey = v.trim();
+        currentUsername = "";
         props.onApiKeyChange(v.trim());
         props.onChange("");
       } else {
+        currentUsername = v;
         props.onChange(v);
       }
     });
 
     const apiKeyInput = form.querySelector("#apikey-input") as HTMLInputElement;
     apiKeyInput?.addEventListener("input", (e) => {
-      props.onApiKeyChange((e.target as HTMLInputElement).value);
+      currentApiKey = (e.target as HTMLInputElement).value;
+      props.onApiKeyChange(currentApiKey);
     });
 
     form.querySelector("#toggle-eye-btn")?.addEventListener("click", () => {
@@ -170,6 +184,16 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
       if (u) setCookie("tr_username", u);
       if (k) setCookie("tr_api_key", k);
       saveMsg = "Credentials saved to browser cookie";
+      update();
+      setTimeout(() => { saveMsg = ""; update(); }, 3000);
+    });
+
+    form.querySelector("#load-cookie-btn")?.addEventListener("click", () => {
+      currentUsername = getCookie("tr_username");
+      currentApiKey = getCookie("tr_api_key");
+      props.onChange(currentUsername);
+      props.onApiKeyChange(currentApiKey);
+      saveMsg = "Credentials loaded from browser cookie";
       update();
       setTimeout(() => { saveMsg = ""; update(); }, 3000);
     });

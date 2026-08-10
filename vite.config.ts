@@ -13,6 +13,6 @@ export default defineConfig({
     },
   },
   define: {
-    'process.env.APP_VERSION': JSON.stringify('2.0.0'),
+    'process.env.APP_VERSION': JSON.stringify('2.0.1'),
   },
 });

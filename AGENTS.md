@@ -21,6 +21,13 @@ The helper `formatDisplayDate()` in `src/types.ts` implements this. Use it where
 - **SVG Chart Date Labels**: X-axis date labels on charts MUST be slanted at `-15°` (`transform="rotate(-15, ...)"`, `text-anchor="end"`) to prevent label overlap.
 - **Activity Heatmap Date Headers**: Week-start date labels (Sunday of each week) MUST use `MMM/DD/YYYY` angled at `-30deg` with `transform-origin: bottom left`, positioned above each column. All 7 weekday labels (Sun–Sat) must be shown on the left. The grid must remain exactly 52 columns ending on the upcoming Saturday, with future cells hidden.
 
+## Git & Deployment Workflow Policy
+- **No Unsolicited Git Pushes / Vercel Checks**: Do NOT run `git push`, push changes to GitHub, or perform Vercel web app deployment checks unless explicitly asked by the user, or when `/git-release` is invoked. Keep routine work focused strictly on local file edits and local verification (`http://localhost:1384`).
+
+## Windows Vite 6 & Tailwind v4 CSS Handling
+- **No PostCSS Files**: Do NOT create `postcss.config.*` files or add `"postcss"` keys to `package.json`. Tailwind CSS v4 is handled natively via `@tailwindcss/vite`.
+- **Server Cache Clear**: If Vite dev server caches PostCSS error handles on Windows, terminate the running Vite dev server task before launching a fresh dev server instance.
+
 ## Testing & Privacy Constraints
-- **Browser Subagent QA**: Automatically run the `browser` subagent to test live applications (`http://localhost:1384`) after major iterations.
+- **Browser Subagent QA**: Automatically run the `browser` subagent to test local applications (`http://localhost:1384`) after major iterations.
 - **Credential Privacy**: NEVER write down or commit user API keys, passwords, or private tokens into persistent documentation or codebase files. Keep secrets strictly transient in chat memory.

@@ -50,6 +50,7 @@
   --color-beige-700: #7c6f5a;  /* Secondary text light: Warm bronze-grey */
   --color-beige-800: #382a2c;  /* Dark card border */
   --color-beige-900: #241e20;  /* Dark card background */
+  --color-beige-950: #161214;  /* Deep dark velvet page background */
   --color-red-50: #fff5f5;
   --color-red-100: #fde8e8;
   --color-red-200: #fbd0d0;
@@ -71,4 +72,39 @@ body {
 .dark body {
   background-color: #161214; /* Dark grey velvet background */
   color: #fdf8ea; /* Light cream text */
+}
+
+/* Custom Theme Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f5edd8;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #241e20;
+}
+::-webkit-scrollbar-thumb {
+  background: #9e8d76;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #382a2c;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #800000;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #c52228;
+}
+
+/* Firefox scrollbar support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #9e8d76 #f5edd8;
+}
+.dark * {
+  scrollbar-color: #382a2c #241e20;
 }

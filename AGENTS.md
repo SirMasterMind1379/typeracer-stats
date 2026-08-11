@@ -35,6 +35,12 @@ The helper `formatDisplayDate()` in `src/types.ts` implements this. Use it where
 - **QOTD Daily Reset Timestamp Calculation**: Daily QOTD resets at **00:00 UTC** (8:00 PM EDT). Always calculate `today00UTC` (`Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())`). `qotdDone` MUST ONLY evaluate to `true` if a QOTD race or competition result occurred **after `today00UTC`**. Do NOT rely on permanent profile badges.
 - **Zero-Filter Race Preservation**: NEVER filter out valid races (`speed > 0`). Retain all races (multiplayer, practice, solo, QOTD), tag each race with its mode, and permit mode filtering exclusively via UI controls (`All Races`, `Multiplayer`, `Practice`, `QOTD`).
 
+## Theme & UI Component Invariants
+- **Auto-Theme & System Preference**: Theme mode MUST default to `"auto"` for new users to match OS and browser `prefers-color-scheme`. The toggle button MUST cycle `AUTO` ➔ `LIGHT` ➔ `DARK` ➔ `AUTO`. Dynamic listeners on `window.matchMedia("(prefers-color-scheme: dark)")` MUST update the app in real time when system theme changes in auto mode.
+- **Tailwind v4 Theme Token Declarations**: Custom Tailwind v4 color variables MUST be explicitly declared under `@theme` in `src/index.css` (e.g., `--color-beige-950: #161214`). Never reference undeclared theme color tokens, as missing variables evaluate to transparent/white backgrounds in dark mode.
+- **In-Place Structural Skeleton Loading**: When `loading === true`, the application MUST render structural skeleton placeholders in the exact visual layout positions of all dashboard components (Profile, Stats Cards, Controls, Chart, Heatmap, Race Table, Mode Breakdown, Pokédex Grid). Do NOT append generic loader boxes at the bottom.
+- **Component UI State Preservation Across Theme Toggles**: Component local state (such as `TextCollectorState` with `isPokedexView` and `selectedQuoteId`) MUST be persisted across `render()` calls so theme switches do NOT reset active views or close open detail drawers.
+
 ## Testing & Privacy Constraints
 - **Browser Subagent QA**: Automatically run the `browser` subagent to test local applications (`http://localhost:1384`) after major iterations.
 - **Credential Privacy**: NEVER write down or commit user API keys, passwords, or private tokens into persistent documentation or codebase files. Keep secrets strictly transient in chat memory.

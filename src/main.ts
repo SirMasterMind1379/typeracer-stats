@@ -1,5 +1,5 @@
 import "./index.css";
-import { renderHeader } from "./components/Header";
+import { renderHeader, type ThemeMode } from "./components/Header";
 import { renderSearchForm } from "./components/SearchForm";
 import { renderDataImport } from "./components/DataImport";
 import { renderUserProfile } from "./components/UserProfile";
@@ -12,8 +12,8 @@ import { renderExportButton } from "./components/ExportButton";
 import { renderCsvExportButton } from "./components/CsvExportButton";
 import { renderErrorBanner } from "./components/ErrorBanner";
 import { renderModeComparison, categorizeRaceMode } from "./components/ModeComparison";
-import { renderTextCollector } from "./components/TextCollector";
-import type { UserData, Race, Metric, TimeframeStats as TStats } from "./types";
+import { renderTextCollector, type TextCollectorState } from "./components/TextCollector";
+import type { UserData, Race, Metric, TimeframeStats } from "./types";
 import { formatDisplayDate, isCompetitiveRace, sortByDate, getCookie } from "./types";
 import { getCachedRaces, saveCachedRaces, getCachedProfile, saveCachedProfile } from "./db";
 
@@ -33,6 +33,9 @@ class App {
   private selectedMetric: Metric = "speed";
   private selectedModeFilter: string = "all";
   private raceLimit: number | null = null;
+
+  // Auto Theme: System/Browser preference by default for new users ("auto" | "light" | "dark")
+  private themeMode: ThemeMode = "auto";
   private dark = false;
 
   private refAreaLeft: number | null = null;
@@ -40,6 +43,15 @@ class App {
   private zoomBounds: { left: number; right: number } | null = null;
 
   private lastSubmitted = { username: "", apiKey: "" };
+
+  private textCollectorState: TextCollectorState = {
+    isPokedexView: false,
+    selectedQuoteId: null,
+    filterSearch: "",
+    currentSort: "recent",
+    filterRepeat: "all",
+    pageSize: 30,
+  };
 
   private rootEl: HTMLElement;
 
@@ -52,16 +64,43 @@ class App {
   }
 
   private initTheme() {
-    const stored = localStorage.getItem("theme");
-    // Default to light theme unless explicitly stored as "dark"
-    this.dark = stored === "dark";
+    const stored = localStorage.getItem("theme_mode") as ThemeMode | null;
+    if (stored === "light" || stored === "dark" || stored === "auto") {
+      this.themeMode = stored;
+    } else {
+      // Default for new users: "auto" (catches OS & browser dark/light preference!)
+      this.themeMode = "auto";
+    }
+
+    this.applyTheme();
+
+    // Dynamically update theme when OS / browser color scheme changes in auto mode
+    if (typeof window !== "undefined" && window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+        if (this.themeMode === "auto") {
+          this.applyTheme();
+          this.render();
+        }
+      });
+    }
+  }
+
+  private applyTheme() {
+    if (this.themeMode === "auto") {
+      this.dark = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    } else {
+      this.dark = this.themeMode === "dark";
+    }
     document.documentElement.classList.toggle("dark", this.dark);
   }
 
   private toggleTheme = () => {
-    this.dark = !this.dark;
-    localStorage.setItem("theme", this.dark ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", this.dark);
+    if (this.themeMode === "auto") this.themeMode = "light";
+    else if (this.themeMode === "light") this.themeMode = "dark";
+    else this.themeMode = "auto";
+
+    localStorage.setItem("theme_mode", this.themeMode);
+    this.applyTheme();
     this.render();
   };
 
@@ -80,12 +119,10 @@ class App {
     this.refAreaRight = null;
     this.zoomBounds = null;
 
-    // Reset active dashboard state on new search
     this.data = null;
     this.fullRaces = [];
     this.dataSource = null;
 
-    // Read current DOM input values
     const domUser = (document.getElementById("username-input") as HTMLInputElement)?.value;
     const domKey = (document.getElementById("apikey-input") as HTMLInputElement)?.value;
     let username = (domUser !== undefined ? domUser : this.input).trim();
@@ -101,7 +138,6 @@ class App {
       return;
     }
 
-    // Privacy Guard: Load IndexedDB cache ONLY if user explicitly provides their API Key
     let cachedRaces: Race[] = [];
     if (key) {
       const cachedProfile = await getCachedProfile(username);
@@ -143,7 +179,6 @@ class App {
       const freshRaces: Race[] = result.races || [];
       const filteredFresh = freshRaces.filter((r: Race) => r.speed != null && r.speed > 0);
 
-      // Delta Merge with IndexedDB Cache ONLY if key is present
       let mergedRaces = filteredFresh;
       if (key) {
         const raceMap = new Map<string, Race>();
@@ -152,7 +187,6 @@ class App {
         mergedRaces = Array.from(raceMap.values());
         result.races = mergedRaces;
 
-        // Persist to IndexedDB
         await saveCachedProfile(username, result);
         await saveCachedRaces(username, mergedRaces);
       }
@@ -174,7 +208,6 @@ class App {
     } finally {
       this.loading = false;
       this.render();
-      this.scrollToProfile();
     }
   };
 
@@ -218,7 +251,6 @@ class App {
     this.dataSource = "import";
 
     this.render();
-    this.scrollToProfile();
   };
 
   private handleClear = () => {
@@ -241,23 +273,15 @@ class App {
     this.render();
   };
 
-  private scrollToProfile() {
-    setTimeout(() => {
-      document.getElementById("user-profile-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 300);
-  }
-
-  /* ── Mode Filtering Helper ── */
   private getFilteredRaces(): Race[] {
     if (!this.data) return [];
     if (this.selectedModeFilter === "all") return this.data.races;
     return this.data.races.filter((r) => categorizeRaceMode(r) === this.selectedModeFilter);
   }
 
-  /* ── Chart & Timeframe Data Preparation ── */
   private prepareChartData() {
     const activeRaces = this.getFilteredRaces();
-    if (!activeRaces.length) return { useDateLabels: false, rollingData: [], regression: null, timeframeStats: null };
+    if (!activeRaces.length) return null;
 
     const sortedRaces = sortByDate(activeRaces);
     const allChartData = sortedRaces.map((r, i) => ({
@@ -302,7 +326,7 @@ class App {
       };
     }
 
-    const timeframeStats: TStats | null = filteredData.length
+    const timeframeStats: TimeframeStats | null = filteredData.length
       ? {
           races: filteredData.length,
           avgSpeed: (filteredData.reduce((s, r) => s + r.speed, 0) / filteredData.length).toFixed(1),
@@ -316,17 +340,14 @@ class App {
     return { useDateLabels, rollingData, regression, timeframeStats };
   }
 
-  /* ── Main Render Loop ── */
   private render() {
     this.rootEl.innerHTML = "";
 
     const container = document.createElement("div");
-    container.className = "max-w-6xl mx-auto p-4 sm:p-8 flex flex-col gap-6";
+    container.className = "max-w-6xl mx-auto p-4 sm:p-8 flex flex-col gap-6 font-sans min-h-screen bg-beige-50 dark:bg-beige-950 text-beige-900 dark:text-beige-100 transition-colors duration-200";
 
-    // Header
-    container.appendChild(renderHeader(this.dark, this.toggleTheme));
+    container.appendChild(renderHeader(this.themeMode, this.dark, this.toggleTheme));
 
-    // Form / Import Row
     const formRow = document.createElement("div");
     formRow.className = "grid grid-cols-1 sm:grid-cols-2 gap-4";
 
@@ -371,26 +392,21 @@ class App {
     formRow.appendChild(actionCol);
     container.appendChild(formRow);
 
-    // Error Banner
     if (this.error) {
       container.appendChild(renderErrorBanner(this.error));
     }
 
-    // Main Data Section
     if (this.data) {
       const derived = this.prepareChartData();
 
-      // Profile
       const profileWrap = document.createElement("div");
       profileWrap.id = "user-profile-section";
       profileWrap.appendChild(renderUserProfile(this.data, this.dataSource));
       container.appendChild(profileWrap);
 
-      // Stats Cards
       container.appendChild(renderStatsCards(this.data));
 
       if (this.data.races.length > 0 && derived) {
-        // Controls Row: Mode Filter, Metric & Race Limit buttons
         const controls = document.createElement("div");
         controls.className = "flex flex-wrap items-center justify-between gap-3 w-full";
 
@@ -404,7 +420,6 @@ class App {
               : "bg-beige-100 dark:bg-beige-900 border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100"
           }`;
 
-        // Mode Filter Grouping
         const modeGroup = document.createElement("div");
         modeGroup.className = "flex flex-wrap items-center gap-1.5";
 
@@ -426,12 +441,10 @@ class App {
         });
         btnGroup.appendChild(modeGroup);
 
-        // Separator 1 (Mode -> Stat)
         const sep1 = document.createElement("div");
         sep1.className = "hidden xl:block w-px h-6 bg-beige-300 dark:bg-beige-700 mx-0.5 shrink-0 self-center";
         btnGroup.appendChild(sep1);
 
-        // Stat Metrics Grouping
         const statGroup = document.createElement("div");
         statGroup.className = "flex flex-wrap items-center gap-1.5";
 
@@ -447,12 +460,10 @@ class App {
         });
         btnGroup.appendChild(statGroup);
 
-        // Separator 2 (Stat -> Last X Races)
         const sep2 = document.createElement("div");
         sep2.className = "hidden xl:block w-px h-6 bg-beige-300 dark:bg-beige-700 mx-0.5 shrink-0 self-center";
         btnGroup.appendChild(sep2);
 
-        // Last X Races Grouping
         const limitGroup = document.createElement("div");
         limitGroup.className = "flex flex-wrap items-center gap-1.5";
 
@@ -490,10 +501,10 @@ class App {
 
         container.appendChild(controls);
 
-        // Timeframe Summary Stats
-        container.appendChild(renderTimeframeStats(derived.timeframeStats));
+        if (derived.timeframeStats) {
+          container.appendChild(renderTimeframeStats(derived.timeframeStats));
+        }
 
-        // Chart Container
         const chartExportBox = document.createElement("div");
         chartExportBox.id = "chart-export";
         chartExportBox.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-4";
@@ -563,46 +574,41 @@ class App {
 
         container.appendChild(chartExportBox);
 
-        // Activity Heatmap
-        if (derived.useDateLabels) {
-          const heatmapBox = document.createElement("div");
-          heatmapBox.id = "heatmap-export";
-          heatmapBox.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-4";
+        const heatmapBox = document.createElement("div");
+        heatmapBox.id = "heatmap-export";
+        heatmapBox.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-4";
 
-          const hmHeader = document.createElement("div");
-          hmHeader.className = "flex items-center justify-between mb-3";
+        const hmHeader = document.createElement("div");
+        hmHeader.className = "flex items-center justify-between mb-3";
 
-          const hmTitle = document.createElement("h3");
-          hmTitle.className = "text-sm font-semibold text-beige-700 dark:text-beige-300 uppercase tracking-wide";
-          hmTitle.textContent = "DAILY ACTIVITY";
+        const hmTitle = document.createElement("h3");
+        hmTitle.className = "text-sm font-semibold text-beige-700 dark:text-beige-300 uppercase tracking-wide";
+        hmTitle.textContent = "DAILY ACTIVITY";
 
-          hmHeader.appendChild(hmTitle);
-          hmHeader.appendChild(renderExportButton("heatmap-export", `heatmap_${themeStr}.png`));
-          heatmapBox.appendChild(hmHeader);
+        hmHeader.appendChild(hmTitle);
+        hmHeader.appendChild(renderExportButton("heatmap-export", `heatmap_${themeStr}.png`));
+        heatmapBox.appendChild(hmHeader);
 
-          heatmapBox.appendChild(renderActivityHeatmap({ races: this.getFilteredRaces(), dark: this.dark }));
+        heatmapBox.appendChild(renderActivityHeatmap({ races: this.getFilteredRaces(), dark: this.dark }));
 
-          const legend = document.createElement("div");
-          legend.className = "flex items-center justify-center gap-1 mt-2 text-[10px] text-beige-600 dark:text-beige-400";
-          legend.innerHTML = `
-            <span>Less</span>
-            <div class="flex gap-[2px]">
-              ${["bg-beige-100", "bg-red-100", "bg-red-200", "bg-red-400", "bg-red-600", "bg-red-800", "bg-red-900"]
-                .map((c) => `<div class="w-3 h-3 ${c}"></div>`)
-                .join("")}
-            </div>
-            <span>More</span>
-            ${this.dark ? `<span class="ml-2 text-[10px] text-beige-400">(dark: red intensity)</span>` : ""}
-          `;
-          heatmapBox.appendChild(legend);
+        const legend = document.createElement("div");
+        legend.className = "flex items-center justify-center gap-1 mt-2 text-[10px] text-beige-600 dark:text-beige-400";
+        legend.innerHTML = `
+          <span>Less</span>
+          <div class="flex gap-[2px]">
+            ${["bg-beige-100", "bg-red-100", "bg-red-200", "bg-red-400", "bg-red-600", "bg-red-800", "bg-red-900"]
+              .map((c) => `<div class="w-3 h-3 ${c}"></div>`)
+              .join("")}
+          </div>
+          <span>More</span>
+          ${this.dark ? `<span class="ml-2 text-[10px] text-beige-400">(dark: red intensity)</span>` : ""}
+        `;
+        heatmapBox.appendChild(legend);
 
-          container.appendChild(heatmapBox);
-        }
+        container.appendChild(heatmapBox);
 
-        // Sortable Race History Table
         container.appendChild(renderRaceTable({ races: this.getFilteredRaces() }));
 
-        // Mode Comparison Breakdown (Bottom of page under charts & table)
         container.appendChild(
           renderModeComparison(this.data.races, (modeKey) => {
             this.selectedModeFilter = modeKey;
@@ -610,27 +616,180 @@ class App {
           })
         );
 
-        // Text ID Collector ("Catch 'Em All") Matrix
-        container.appendChild(renderTextCollector(this.getFilteredRaces()));
+        container.appendChild(renderTextCollector(this.getFilteredRaces(), this.textCollectorState));
       }
-    }
-
-    // Loading Squares Loader
-    if (this.loading) {
-      const loader = document.createElement("div");
-      loader.className = "flex justify-center py-20";
-      loader.innerHTML = `
-        <div class="flex gap-1.5">
-          <div class="w-3 h-3 bg-red-900 dark:bg-red-400 animate-pulse-square"></div>
-          <div class="w-3 h-3 bg-red-900 dark:bg-red-400 animate-pulse-square" style="animation-delay: 0.15s"></div>
-          <div class="w-3 h-3 bg-red-900 dark:bg-red-400 animate-pulse-square" style="animation-delay: 0.3s"></div>
-          <div class="w-3 h-3 bg-red-900 dark:bg-red-400 animate-pulse-square" style="animation-delay: 0.45s"></div>
-        </div>
-      `;
-      container.appendChild(loader);
+    } else if (this.loading) {
+      container.appendChild(this.renderDashboardSkeleton());
     }
 
     this.rootEl.appendChild(container);
+  }
+
+  private renderDashboardSkeleton(): HTMLElement {
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex flex-col gap-6 w-full font-mono mt-2";
+
+    // 1. Loading Status Banner
+    const statusBox = document.createElement("div");
+    statusBox.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-5 flex flex-col items-center justify-center gap-2.5 text-center";
+    statusBox.innerHTML = `
+      <div class="flex gap-1.5">
+        <div class="w-3.5 h-3.5 bg-red-900 dark:bg-red-400 animate-pulse-square"></div>
+        <div class="w-3.5 h-3.5 bg-red-900 dark:bg-red-400 animate-pulse-square" style="animation-delay: 0.15s"></div>
+        <div class="w-3.5 h-3.5 bg-red-900 dark:bg-red-400 animate-pulse-square" style="animation-delay: 0.3s"></div>
+        <div class="w-3.5 h-3.5 bg-red-900 dark:bg-red-400 animate-pulse-square" style="animation-delay: 0.45s"></div>
+      </div>
+      <span class="text-xs font-bold text-red-900 dark:text-red-400 uppercase tracking-widest animate-pulse">
+        Fetching Profile Stats & Lifetime Race History... Please wait
+      </span>
+      <span class="text-[10px] text-beige-600 dark:text-beige-400">Loading historical dates & multi-batch race data</span>
+    `;
+    wrapper.appendChild(statusBox);
+
+    // 2. User Profile Box Skeleton (exact location)
+    const profileSkeleton = document.createElement("div");
+    profileSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-pulse";
+    profileSkeleton.innerHTML = `
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 bg-beige-300 dark:bg-beige-800 rounded-full"></div>
+        <div class="flex flex-col gap-2">
+          <div class="h-5 w-44 bg-beige-300 dark:bg-beige-800"></div>
+          <div class="h-3.5 w-28 bg-beige-300 dark:bg-beige-800"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="h-8 w-28 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-8 w-28 bg-beige-300 dark:bg-beige-800"></div>
+      </div>
+    `;
+    wrapper.appendChild(profileSkeleton);
+
+    // 3. Stats Summary Cards Row Skeleton (4 Grid items in exact location)
+    const statsSkeleton = document.createElement("div");
+    statsSkeleton.className = "grid grid-cols-2 md:grid-cols-4 gap-3";
+    for (let i = 0; i < 4; i++) {
+      const card = document.createElement("div");
+      card.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-4 flex flex-col gap-2.5 animate-pulse";
+      card.style.animationDelay = `${i * 0.08}s`;
+      card.innerHTML = `
+        <div class="h-3 w-16 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-7 w-24 bg-beige-300 dark:bg-beige-800"></div>
+      `;
+      statsSkeleton.appendChild(card);
+    }
+    wrapper.appendChild(statsSkeleton);
+
+    // 4. Chart Controls Bar Skeleton (exact location)
+    const controlsSkeleton = document.createElement("div");
+    controlsSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-3 flex flex-wrap justify-between items-center gap-3 animate-pulse";
+    controlsSkeleton.innerHTML = `
+      <div class="flex gap-2">
+        <div class="h-8 w-20 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-8 w-24 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-8 w-20 bg-beige-300 dark:bg-beige-800"></div>
+      </div>
+      <div class="h-8 w-32 bg-beige-300 dark:bg-beige-800"></div>
+    `;
+    wrapper.appendChild(controlsSkeleton);
+
+    // 5. Timeframe Stats Summary Skeleton
+    const timeframeSkeleton = document.createElement("div");
+    timeframeSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 animate-pulse";
+    for (let i = 0; i < 4; i++) {
+      const item = document.createElement("div");
+      item.className = "flex flex-col gap-1.5";
+      item.innerHTML = `
+        <div class="h-3 w-16 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-6 w-20 bg-beige-300 dark:bg-beige-800"></div>
+      `;
+      timeframeSkeleton.appendChild(item);
+    }
+    wrapper.appendChild(timeframeSkeleton);
+
+    // 6. Speed Over Time Chart Container Skeleton (exact location)
+    const chartSkeleton = document.createElement("div");
+    chartSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-5 flex flex-col gap-4 animate-pulse";
+    chartSkeleton.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="h-4 w-40 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-4 w-28 bg-beige-300 dark:bg-beige-800"></div>
+      </div>
+      <div class="h-72 bg-beige-200/50 dark:bg-beige-800/40 border border-dashed border-beige-300 dark:border-beige-700 flex flex-col items-center justify-center gap-2">
+        <span class="text-xs font-bold text-beige-600 dark:text-beige-400">Loading Speed Over Time Chart...</span>
+      </div>
+    `;
+    wrapper.appendChild(chartSkeleton);
+
+    // 7. Daily Activity Heatmap Box Skeleton (exact location)
+    const heatmapSkeleton = document.createElement("div");
+    heatmapSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-5 flex flex-col gap-4 animate-pulse";
+    heatmapSkeleton.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="h-4 w-32 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-4 w-20 bg-beige-300 dark:bg-beige-800"></div>
+      </div>
+      <div class="h-28 bg-beige-200/50 dark:bg-beige-800/40 border border-dashed border-beige-300 dark:border-beige-700 flex items-center justify-center">
+        <span class="text-xs text-beige-600 dark:text-beige-400">Generating 52-Week Activity Heatmap...</span>
+      </div>
+    `;
+    wrapper.appendChild(heatmapSkeleton);
+
+    // 8. Race History Table Box Skeleton (exact location)
+    const tableSkeleton = document.createElement("div");
+    tableSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-5 flex flex-col gap-3 animate-pulse";
+    tableSkeleton.innerHTML = `
+      <div class="flex items-center justify-between mb-1">
+        <div class="h-4 w-44 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-8 w-32 bg-beige-300 dark:bg-beige-800"></div>
+      </div>
+      <div class="flex flex-col gap-2">
+        ${Array(5)
+          .fill(0)
+          .map(
+            () => `
+          <div class="h-9 bg-beige-200/60 dark:bg-beige-800/60 border border-beige-300/40 dark:border-beige-700/40"></div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+    wrapper.appendChild(tableSkeleton);
+
+    // 9. Per-Mode Performance Breakdown Skeleton (exact location)
+    const modeSkeleton = document.createElement("div");
+    modeSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-5 flex flex-col gap-4 animate-pulse";
+    modeSkeleton.innerHTML = `
+      <div class="h-4 w-56 bg-beige-300 dark:bg-beige-800"></div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="h-32 bg-beige-200/60 dark:bg-beige-800/60 border border-beige-300 dark:border-beige-700"></div>
+        <div class="h-32 bg-beige-200/60 dark:bg-beige-800/60 border border-beige-300 dark:border-beige-700"></div>
+        <div class="h-32 bg-beige-200/60 dark:bg-beige-800/60 border border-beige-300 dark:border-beige-700"></div>
+      </div>
+    `;
+    wrapper.appendChild(modeSkeleton);
+
+    // 10. Text Collector Pokédex Skeleton (exact location)
+    const textCollectorSkeleton = document.createElement("div");
+    textCollectorSkeleton.className = "bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 p-5 flex flex-col gap-4 animate-pulse";
+    textCollectorSkeleton.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="h-4 w-44 bg-beige-300 dark:bg-beige-800"></div>
+        <div class="h-8 w-36 bg-beige-300 dark:bg-beige-800"></div>
+      </div>
+      <div class="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-10 gap-2 mt-1">
+        ${Array(18)
+          .fill(0)
+          .map(
+            () => `
+          <div class="h-12 bg-beige-200/60 dark:bg-beige-800/60 border border-beige-300/40 dark:border-beige-700/40"></div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+    wrapper.appendChild(textCollectorSkeleton);
+
+    return wrapper;
   }
 }
 

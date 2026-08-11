@@ -8,13 +8,14 @@
     <script>
       (function() {
         try {
-          var stored = localStorage.getItem('theme');
-          if (stored === 'dark') document.documentElement.classList.add('dark');
+          var stored = localStorage.getItem('theme_mode');
+          var isDark = stored === 'dark' || ((!stored || stored === 'auto') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
     </script>
   </head>
-  <body class="min-h-screen transition-colors">
+  <body class="min-h-screen bg-beige-50 dark:bg-beige-950 text-beige-900 dark:text-beige-100 transition-colors duration-200">
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

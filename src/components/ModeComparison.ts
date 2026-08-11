@@ -7,8 +7,10 @@ export interface ModeMetrics {
   racesCount: number;
   sharePercent: string;
   avgWpm: string;
-  bestWpm: number;
+  bestWpm: string;
+  avgAcc: string;
   winRate?: string;
+  trend: string;
   icon: string;
 }
 
@@ -17,7 +19,12 @@ export function categorizeRaceMode(r: Race): "multiplayer" | "practice_qotd" | "
   if (modeLower.includes("room")) {
     return "room";
   }
-  if (modeLower.includes("qotd") || modeLower.includes("practice") || (r.totalRacers <= 1 && !r.mode)) {
+  if (
+    modeLower.includes("qotd") ||
+    modeLower.includes("quote of the day") ||
+    modeLower.includes("practice") ||
+    (r.totalRacers <= 1 && !r.mode)
+  ) {
     return "practice_qotd";
   }
   return "multiplayer";
@@ -68,24 +75,46 @@ function calculateGroupMetrics(group: Race[], totalAll: number, includeWinRate: 
     return {
       racesCount: 0,
       sharePercent: "0.0",
-      avgWpm: "0.0",
-      bestWpm: 0,
-      winRate: includeWinRate ? "0.0%" : undefined,
+      avgWpm: "0.00",
+      bestWpm: "0.00",
+      avgAcc: "0.00%",
+      winRate: includeWinRate ? "0.00%" : undefined,
+      trend: "0.0000 WPM/race",
     };
   }
 
-  const sharePercent = ((racesCount / totalAll) * 100).toFixed(1);
+  const sharePercent = ((racesCount / totalAll) * 100).toFixed(1); // 1 decimal as requested
   const speeds = group.map((r) => r.speed);
-  const avgWpm = (speeds.reduce((a, b) => a + b, 0) / racesCount).toFixed(1);
-  const bestWpm = Math.max(...speeds, 0);
+  const accs = group.map((r) => r.accuracy);
+  const avgWpm = (speeds.reduce((a, b) => a + b, 0) / racesCount).toFixed(2); // 2 decimals
+  const bestWpm = Math.max(...speeds, 0).toFixed(2); // 2 decimals
+  const meanAcc = accs.reduce((a, b) => a + b, 0) / racesCount;
+  const avgAccVal = meanAcc <= 1 ? meanAcc * 100 : meanAcc;
+  const avgAcc = `${avgAccVal.toFixed(2)}%`;
+
+  // Calculate 4-decimal trend slope over race indices
+  let trendSlope = 0;
+  if (speeds.length >= 2) {
+    const n = speeds.length;
+    const indices = speeds.map((_, i) => i);
+    const sumX = indices.reduce((a, b) => a + b, 0);
+    const sumY = speeds.reduce((a, b) => a + b, 0);
+    const sumXY = indices.reduce((s, i) => s + i * speeds[i], 0);
+    const sumX2 = indices.reduce((s, i) => s + i * i, 0);
+    const denom = n * sumX2 - sumX * sumX;
+    if (denom !== 0) {
+      trendSlope = (n * sumXY - sumX * sumY) / denom;
+    }
+  }
+  const trend = `${trendSlope >= 0 ? "+" : ""}${trendSlope.toFixed(4)} WPM/race`; // 4 decimals as requested
 
   let winRate: string | undefined = undefined;
   if (includeWinRate) {
     const wins = group.filter((r) => r.won).length;
-    winRate = `${((wins / racesCount) * 100).toFixed(1)}%`;
+    winRate = `${((wins / racesCount) * 100).toFixed(2)}%`; // 2 decimals as requested
   }
 
-  return { racesCount, sharePercent, avgWpm, bestWpm, winRate };
+  return { racesCount, sharePercent, avgWpm, bestWpm, avgAcc, winRate, trend };
 }
 
 export function renderModeComparison(races: Race[], onSelectMode?: (modeKey: string) => void): HTMLElement {
@@ -151,8 +180,16 @@ export function renderModeComparison(races: Race[], onSelectMode?: (modeKey: str
           <span class="text-sm font-bold text-beige-800 dark:text-beige-200">${mode.bestWpm} WPM</span>
         </div>
         <div>
+          <span class="text-[10px] uppercase text-beige-600 dark:text-beige-400 block">Avg Accuracy</span>
+          <span class="text-sm font-bold text-beige-800 dark:text-beige-200">${mode.avgAcc}</span>
+        </div>
+        <div>
           <span class="text-[10px] uppercase text-beige-600 dark:text-beige-400 block">${mode.winRate ? "Win Rate" : "Mode"}</span>
           <span class="text-sm font-bold text-beige-800 dark:text-beige-200">${mode.winRate || "Practice"}</span>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase text-beige-600 dark:text-beige-400 block">Speed Trend</span>
+          <span class="text-xs font-bold ${mode.trend.startsWith("+") ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}">${mode.trend}</span>
         </div>
       </div>
     `;

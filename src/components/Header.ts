@@ -1,6 +1,33 @@
-export function renderHeader(dark: boolean, onToggle: () => void): HTMLElement {
+export type ThemeMode = "auto" | "light" | "dark";
+
+export function renderHeader(themeMode: ThemeMode, resolvedDark: boolean, onToggle: () => void): HTMLElement {
   const container = document.createElement("div");
   container.className = "flex items-center justify-between";
+
+  const getThemeIconAndLabel = () => {
+    if (themeMode === "auto") {
+      return `
+        <span class="flex items-center gap-1.5 text-xs font-mono font-bold">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+          AUTO (${resolvedDark ? "DARK" : "LIGHT"})
+        </span>
+      `;
+    }
+    if (themeMode === "light") {
+      return `
+        <span class="flex items-center gap-1.5 text-xs font-mono font-bold">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          LIGHT
+        </span>
+      `;
+    }
+    return `
+      <span class="flex items-center gap-1.5 text-xs font-mono font-bold">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        DARK
+      </span>
+    `;
+  };
 
   container.innerHTML = `
     <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">
@@ -11,7 +38,7 @@ export function renderHeader(dark: boolean, onToggle: () => void): HTMLElement {
         rel="noopener noreferrer"
         class="ml-2 text-xs font-normal text-beige-600 dark:text-beige-400 hover:text-beige-800 dark:hover:text-beige-200 align-baseline"
       >
-        v2.0.1
+        v2.2.0
       </a>
     </h1>
     <div class="flex items-center gap-2">
@@ -26,14 +53,11 @@ export function renderHeader(dark: boolean, onToggle: () => void): HTMLElement {
       </a>
       <button
         id="theme-toggle-btn"
-        class="p-2 border border-beige-300 dark:border-beige-700 bg-beige-100 dark:bg-beige-900 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100 cursor-pointer"
-        aria-label="Toggle theme"
+        class="px-2.5 py-1.5 border border-beige-300 dark:border-beige-700 bg-beige-100 dark:bg-beige-900 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100 cursor-pointer transition-all"
+        title="Theme Mode: ${themeMode.toUpperCase()} (Click to cycle Auto -> Light -> Dark)"
+        aria-label="Toggle theme mode"
       >
-        ${
-          dark
-            ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`
-            : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`
-        }
+        ${getThemeIconAndLabel()}
       </button>
     </div>
   `;

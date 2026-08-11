@@ -17,7 +17,7 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
   let sortOrder: SortOrder = "desc";
   let filterText = "";
   let currentPage = 1;
-  let pageSize = 25;
+  let pageSize = 10;
 
   const rawRaces = props.races;
 
@@ -82,7 +82,7 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
   const pageSelect = document.createElement("select");
   pageSelect.id = "page-size-select";
   pageSelect.className = "px-2 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none";
-  [25, 50, 100].forEach((n) => {
+  [10, 25, 50, 100].forEach((n) => {
     const opt = document.createElement("option");
     opt.value = String(n);
     opt.textContent = `${n} / page`;
@@ -144,17 +144,21 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
               <td class="py-2 px-3 text-beige-600 dark:text-beige-400">#${r.raceNum}</td>
               <td class="py-2 px-3 text-beige-900 dark:text-beige-100">${formatDisplayDate(r.date)}</td>
               <td class="py-2 px-3">
-                <span class="px-1.5 py-0.5 text-[10px] uppercase border ${
-                  r.mode?.toLowerCase().includes("qotd")
+                ${(() => {
+                  const m = (r.mode || "").toLowerCase();
+                  const isQotd = m.includes("qotd") || m.includes("quote");
+                  const isRoom = m.includes("room");
+                  const isPractice = m.includes("practice") || (r.totalRacers <= 1 && !r.mode);
+                  const badgeCls = isQotd
                     ? "border-amber-600 bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300"
-                    : r.mode?.toLowerCase().includes("room")
+                    : isRoom
                     ? "border-purple-600 bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-300"
-                    : r.mode?.toLowerCase().includes("practice") || (r.totalRacers <= 1 && !r.mode)
+                    : isPractice
                     ? "border-blue-600 bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-300"
-                    : "border-beige-300 dark:border-beige-700 bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-300"
-                }">
-                  ${r.mode || (r.totalRacers <= 1 ? "practice" : "multiplayer")}
-                </span>
+                    : "border-beige-300 dark:border-beige-700 bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-300";
+                  const label = isQotd ? "QOTD" : isRoom ? "ROOM" : isPractice ? "PRACTICE" : "MULTIPLAYER";
+                  return `<span class="px-1.5 py-0.5 text-[10px] font-bold uppercase border ${badgeCls}">${label}</span>`;
+                })()}
               </td>
               <td class="py-2 px-3 font-semibold text-beige-900 dark:text-beige-100">${r.speed.toFixed(1)}</td>
               <td class="py-2 px-3 text-beige-700 dark:text-beige-300">${r.accuracy.toFixed(1)}%</td>

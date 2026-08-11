@@ -101,7 +101,10 @@ async function scrapeHistoryPages(username: string, oldestApiDateStr?: string) {
               const rank = rankMatch ? parseInt(rankMatch[1]) : 1;
               const nr = rankMatch ? parseInt(rankMatch[2]) : 5;
               const dateStrParsed = new Date(dateMatch[1]).toISOString();
-              const mode = modeMatch ? modeMatch[1].trim() : (nr <= 1 ? "practice" : "multiplayer");
+              let mode = modeMatch ? modeMatch[1].trim() : (nr <= 1 ? "practice" : "multiplayer");
+              if (mode.toLowerCase().includes("quote") || mode.toLowerCase().includes("qotd")) {
+                mode = "qotd";
+              }
 
               scrapedRaces.push({
                 rid: `scraped_${raceNum || Math.random()}`,

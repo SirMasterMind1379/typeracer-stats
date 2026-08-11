@@ -1,37 +1,42 @@
-# ⌨️ TypeRacer Stats V2
+# ⌨️ TypeRacer Stats V2 (v2.2.0)
 
 > **Production-Grade TypeRacer Analytics & Race History Visualizer**  
 > Built with Pure Vanilla TypeScript, Vite 6, Tailwind CSS v4, and Native API Proxying. Zero heavy UI frameworks.
 
 [![Live Demo on Vercel](https://img.shields.io/badge/Vercel_Deployment-Live_Demo-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://typeracer-stats.vercel.app)
 [![Live Demo on GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Live_Demo-222222?style=for-the-badge&logo=github&logoColor=white)](https://sirmastermind1379.github.io/typeracer-stats/)
+[![Release v2.2.0](https://img.shields.io/badge/Release-v2.2.0-800000?style=for-the-badge)](https://github.com/SirMasterMind1379/typeracer-stats/releases/tag/v2.2.0)
 
 ---
 
 ### 🌐 Try the Live Deployments
 
-- 🚀 **Vercel Deployment (Full Serverless Proxy)**: [https://typeracer-stats.vercel.app](https://typeracer-stats.vercel.app)
+- 🚀 **Vercel Deployment (Full Serverless Proxy & Scraper)**: [https://typeracer-stats.vercel.app](https://typeracer-stats.vercel.app)
 - ⚡ **GitHub Pages Deployment**: [https://sirmastermind1379.github.io/typeracer-stats/](https://sirmastermind1379.github.io/typeracer-stats/)
 
+---
 
-## ✨ Features & Highlights
+## ✨ Features & Highlights (v2.2.0)
 
-- **⚡ Zero-Framework Architecture**: High-performance pure DOM TypeScript rendering under 65KB gzipped.
-- **📊 Interactive SVG Charts**: Progressive left-to-right polyline draw (`pathLength="1"`), rotated date ticks (-15°), and linear trend regression math.
-- **🎯 Snapped Crosshair & Hover Tooltip**: Vertical crosshair line snaps to data points with floating detail cards (WPM, Date `MMM/DD/YYYY`, Accuracy, Rank, Mode).
-- **🔎 Drag-to-Zoom & Touch Gestures**: In-place SVG overlay highlighting timeframe slices with auto-recalculated summary statistics. Pinch-to-zoom and tap-to-reset on mobile.
-- **📅 52-Week Activity Heatmap**: GitHub-style calendar grid ending on the current week's Saturday with angled Sunday headers (-30°) and daily race intensity tooltips.
-- **⚡ IndexedDB Fast Cache**: Privacy-gated local storage (`typeracer_db`) for zero-latency instant reloads.
-- **🎨 Red Velvet & Sunny Cream Aesthetic**: Dual-theme support with sunny cream (`#fdf8ea`) light mode, grey velvet (`#161214`) dark mode, and crimson red (`#800000`) accents.
-- **🔒 API Key Privacy Guard**: Strict privacy gating — anonymous searches pull public profile statistics only. Historical race data is isolated behind user API keys.
-- **📥 Data Export & CSV Parse**: Export charts as PNG images (`dom-to-image-more`) or download complete race logs as CSV files. CSV import support for offline data viewing.
+- **⚡ Zero-Framework Architecture**: High-performance pure DOM TypeScript rendering under 72KB gzipped bundle.
+- **🔄 Auto-Theme & System Preference**: Defaults to `"auto"` mode catching browser/OS `prefers-color-scheme`. 3-way toggle button (`💻 AUTO` ➔ `☀️ LIGHT` ➔ `🌙 DARK`) with real-time OS preference change listeners.
+- **🕹️ Text Collector & Pokédex View**: Matrix grid displaying all encountered vs unconquered quote text IDs with state persistence across theme toggles.
+- **📈 Repeat Progression Sparkline**: Interactive dual-line SVG micro chart (`WPM` red line & `Accuracy %` emerald line) for quotes typed 2x or more.
+- **🦴 In-Place Structural Skeleton Loading**: Animated layout skeletons rendered in exact component positions while fetching multi-batch historical race data.
+- **🕷️ Pit History Scraper Fallback (1,000+ Races)**: Automatically scrapes TypeRacer pit race history pages when the API returns 1,000 races, capturing 100% of all lifetime races (1,459+).
+- **🎯 Precision Analytics & Mode Breakdown**: Per-mode speed, accuracy (formatted to 2 decimals), win rates, trend calculations, and uniform orange `QOTD` badges.
+- **📊 Interactive SVG Charts**: Progressive polyline draw, rotated date ticks (`-15°`), crosshairs, tooltips, and timeframe drag-to-zoom.
+- **📅 52-Week Activity Heatmap**: GitHub-style calendar grid ending on the upcoming Saturday with angled Sunday date headers (`-30°`) and daily race intensity tooltips.
+- **⚡ IndexedDB Fast Cache**: Privacy-gated local storage (`typeracer_db`) for zero-latency instant reloads when credentials are provided.
+- **🔒 API Key Privacy Guard & Saved Credentials**: Secure cookie persistence with password eye toggle, credential reload drawer, and strict privacy boundaries.
+- **📥 Export Options**: Export charts as PNG images (`dom-to-image-more`) or download complete raw race logs as CSV files.
 
 ---
 
 ## 🚀 Quickstart & Development Setup
 
 ### Prerequisites
-- Node.js 18+ & npm
+- Node.js 22+ & npm
 - [Bun](https://bun.sh) (optional, for native local API server)
 
 ### Installation
@@ -43,7 +48,7 @@ npm install
 
 ### Running Locally
 ```bash
-# Start Vite Frontend Dev Server (Port 1384)
+# Start Frontend Dev Server (Port 1384)
 npm run dev
 
 # Start Native Bun API Proxy Server (Port 1385)
@@ -64,13 +69,13 @@ This repository includes a ready-to-deploy Vercel Serverless Function setup (`ap
 
 1. Push your repository to GitHub.
 2. Import the repository into [Vercel](https://vercel.com).
-3. Vercel automatically detects the Vite build (`npm run build`) and routes `/api/*` requests to the serverless function. Zero server configuration required!
+3. Vercel automatically detects the Vite build (`npm run build`) and routes `/api/*` requests to the serverless function handler. Zero server configuration required!
 
 ### Option 2: GitHub Pages (Static Host)
 The repository includes an automated GitHub Actions workflow (`.github/workflows/deploy.yml`).
 
 1. Enable GitHub Pages in your repository settings: **Settings > Pages > Source: GitHub Actions**.
-2. Whenever you push to `main` or publish a version tag (e.g. `v2.0.0`), GitHub Actions automatically builds and deploys the static application.
+2. Whenever you push to `main` or publish a version tag (e.g. `v2.2.0`), GitHub Actions automatically builds and deploys the static application using relative base paths (`base: './'`).
 
 ---
 
@@ -78,30 +83,32 @@ The repository includes an automated GitHub Actions workflow (`.github/workflows
 
 ```
 ├── api/
-│   └── user-stats.ts       # Vercel Serverless Function proxy handler
+│   └── user-stats.ts       # Vercel Serverless Function & Pit Scraper handler
 ├── src/
-│   ├── components/         # Modular UI Components
+│   ├── components/         # Modular Pure TS UI Components
 │   │   ├── ActivityHeatmap.ts
-│   │   ├── Chart.ts        # Interactive SVG Chart with Crosshairs & Touch Zoom
+│   │   ├── Chart.ts        # Interactive SVG Chart with Drag Zoom & Tooltips
 │   │   ├── CsvExportButton.ts
 │   │   ├── DataImport.ts
 │   │   ├── ErrorBanner.ts
 │   │   ├── ExportButton.ts
-│   │   ├── Header.ts
-│   │   ├── RaceTable.ts    # Sortable & Filterable Race Log Table
+│   │   ├── Header.ts       # Auto-Theme 3-Way Toggle & Navigation Header
+│   │   ├── ModeComparison.ts # Per-Mode Performance Metrics & Precision Formatting
+│   │   ├── RaceTable.ts    # Sortable & Filterable Race Table (Default 10/page)
 │   │   ├── SearchForm.ts   # Credential Form & Cookie Memory
 │   │   ├── StatsCards.ts
+│   │   ├── TextCollector.ts# Text Collector Pokédex & SVG Repeat Sparklines
 │   │   ├── TimeframeStats.ts
-│   │   └── UserProfile.ts  # Profile Card & Streak Flame Counters
+│   │   └── UserProfile.ts  # Profile Card & QOTD Status Badges
 │   ├── db.ts               # IndexedDB Storage Engine (typeracer_db)
-│   ├── index.css           # Tailwind v4 Configuration & Red Velvet Theme
-│   ├── main.ts             # App State Machine & Render Loop
+│   ├── index.css           # Tailwind v4 Configuration & Red Velvet Theme Tokens
+│   ├── main.ts             # App State Machine, Skeleton Layout & Render Loop
 │   └── types.ts            # TypeScript Models & Date Helpers (MMM/DD/YYYY)
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml      # GitHub Actions CI/CD Pages Workflow
-├── server.ts               # Local Bun.serve API Proxy Server (Port 1385)
-├── vercel.json             # Vercel Deployment & Rewrite Config
+│       └── deploy.yml      # GitHub Actions CI/CD Pages Workflow (Node 22)
+├── server.ts               # Local Bun.serve API Proxy Server & Scraper (Port 1385)
+├── vercel.json             # Vercel Deployment & Serverless Rewrite Config
 └── package.json
 ```
 

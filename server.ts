@@ -54,6 +54,78 @@ async function scrapeProfile(username: string) {
   }
 }
 
+async function scrapeHistoryPages(username: string, oldestApiDateStr?: string) {
+  const scrapedRaces: any[] = [];
+  const dates: string[] = [];
+
+  let curr = oldestApiDateStr ? new Date(oldestApiDateStr) : new Date("2026-05-31");
+  const stopDate = new Date("2024-01-01");
+
+  while (curr >= stopDate) {
+    dates.push(curr.toISOString().split("T")[0]);
+    curr.setDate(curr.getDate() - 10);
+  }
+
+  const chunkSize = 6;
+  for (let i = 0; i < dates.length; i += chunkSize) {
+    const chunk = dates.slice(i, i + chunkSize);
+    await Promise.all(
+      chunk.map(async (dateStr) => {
+        try {
+          const res = await fetch(
+            `https://data.typeracer.com/pit/race_history?user=${username}&n=100&startDate=${dateStr}`,
+            {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              },
+            }
+          );
+          if (!res.ok) return;
+          const html = await res.text();
+          const rows = [...html.matchAll(/<div class="Scores__Table__Row">([\s\S]*?)<\/div>\s*<\/div>/g)];
+          for (const r of rows) {
+            const content = r[1];
+            const numMatch = content.match(/id="\|tr:[^|]+\|(\d+)"/i) || content.match(/href="\/pit\/result\?id=[^"]*?\|(\d+)"/i);
+            const wpmMatch = content.match(/(\d+)\s*WPM/i);
+            const accMatch = content.match(/([\d.]+)%/);
+            const ptsMatch = content.match(/profileTableHeaderAvg">[\s\S]*?(\d+)/i);
+            const dateMatch = content.match(/profileTableHeaderDate">[\s\S]*?([A-Z][a-z]{2}\s+\d+,\s+\d{4})/i);
+            const rankMatch = content.match(/profileTableHeaderPoints">[\s\S]*?(\d+)\/(\d+)/i);
+            const modeMatch = content.match(/profileTableHeaderRaces">[\s\S]*?([A-Za-z0-9\s]+)/i);
+
+            if (wpmMatch && dateMatch) {
+              const raceNum = numMatch ? parseInt(numMatch[1]) : undefined;
+              const wpm = parseFloat(wpmMatch[1]);
+              const acc = accMatch ? parseFloat(accMatch[1]) / 100 : 0.98;
+              const pts = ptsMatch ? parseFloat(ptsMatch[1]) : 0;
+              const rank = rankMatch ? parseInt(rankMatch[1]) : 1;
+              const nr = rankMatch ? parseInt(rankMatch[2]) : 5;
+              const dateStrParsed = new Date(dateMatch[1]).toISOString();
+              const mode = modeMatch ? modeMatch[1].trim() : (nr <= 1 ? "practice" : "multiplayer");
+
+              scrapedRaces.push({
+                rid: `scraped_${raceNum || Math.random()}`,
+                t: dateStrParsed,
+                wpm,
+                acc,
+                pts,
+                r: rank,
+                nr,
+                tid: 0,
+                mode,
+                rn: raceNum,
+              });
+            }
+          }
+        } catch {
+          // continue
+        }
+      })
+    );
+  }
+  return scrapedRaces;
+}
+
 Bun.serve({
   port: PORT,
   async fetch(req) {
@@ -101,10 +173,10 @@ Bun.serve({
           });
         }
 
-        const [racerRes, statsRes, racesRes, scrapeData] = await Promise.all([
+        const [racerRes, statsRes, batch1Res, scrapeData] = await Promise.all([
           fetchFromTR(`/v1/racers/${username}?universe=play`, effectiveUsername, effectiveKey),
           fetchFromTR(`/v1/racers/${username}/stats?universe=play`, effectiveUsername, effectiveKey),
-          fetchFromTR(`/v1/racers/${username}/races?universe=play&n=500`, effectiveUsername, effectiveKey),
+          fetchFromTR(`/v1/racers/${username}/races?universe=play&n=1000`, effectiveUsername, effectiveKey),
           scrapeProfile(username),
         ]);
 
@@ -132,10 +204,25 @@ Bun.serve({
         const racer = racerRes.data || {};
         const statsArray = Array.isArray(statsRes.data) ? statsRes.data : Array.isArray(racer.stats) ? [racer.stats] : racer.stats ? [racer.stats] : [];
         const apiStats = statsArray.find((s: any) => s.universe === 'play') || statsArray[0] || racer.stats || null;
-        const rawRaces = Array.isArray(racesRes.data) ? racesRes.data : [];
+
+        // Fetch latest races via API, then scrape remaining pages if API is capped at 1000
+        let rawRaces: any[] = Array.isArray(batch1Res.data) ? batch1Res.data : [];
+        if (rawRaces.length >= 1000) {
+          const oldestApiRace = rawRaces[rawRaces.length - 1];
+          const oldestDate = oldestApiRace?.t ? new Date(typeof oldestApiRace.t === 'number' ? oldestApiRace.t * 1000 : oldestApiRace.t).toISOString() : undefined;
+          const extraRaces = await scrapeHistoryPages(username, oldestDate);
+          if (extraRaces.length > 0) {
+            const existingIds = new Set(rawRaces.map((r: any) => r.rid || r.rn));
+            for (const er of extraRaces) {
+              if (!existingIds.has(er.rid) && !existingIds.has(er.rn)) {
+                rawRaces.push(er);
+              }
+            }
+          }
+        }
 
         const races = rawRaces
-          .filter((r: any) => r.wpm != null)
+          .filter((r: any) => r.wpm != null && r.wpm > 0)
           .map((r: any) => ({
             id: r.rid,
             date: r.t,
@@ -146,13 +233,8 @@ Bun.serve({
             totalRacers: r.nr,
             textId: r.tid,
             won: r.r === 1,
-            mode: r.mode || r.gn || r.game_mode || undefined,
+            mode: r.mode || r.gn || r.game_mode || (r.nr <= 1 ? 'practice' : 'multiplayer'),
           }));
-
-        console.log('[debug] statsRes.data:', JSON.stringify(statsRes.data));
-        console.log('[debug] racerRes.data:', JSON.stringify(racerRes.data));
-        console.log('[debug] apiStats:', JSON.stringify(apiStats));
-        console.log('[debug] sample race[0]:', JSON.stringify(rawRaces[0]));
 
         let totalRaces = apiStats?.total_races ?? apiStats?.totalRaces ?? apiStats?.numRaces ?? apiStats?.num_races ?? null;
         let totalWins = apiStats?.total_wins ?? apiStats?.totalWins ?? apiStats?.num_wins ?? apiStats?.numWins ?? null;
@@ -182,28 +264,16 @@ Bun.serve({
           }
         }
 
-        let qotdDone = false;
-        const today = new Date().toISOString().slice(0, 10);
-        try {
-          const compRes = await fetchFromTR(`/v2/competitions?universe=play&date=${today}`, effectiveUsername, effectiveKey);
-          const competitions = Array.isArray(compRes.data) ? compRes.data : [];
-          if (competitions.length > 0) {
-            const daily = competitions[0];
-            const resultsRes = await fetchFromTR(`/v2/competitions/results?uid=${daily.uid}`, effectiveUsername, effectiveKey);
-            const results = Array.isArray(resultsRes.data) ? resultsRes.data : [];
-            qotdDone = results.some((r: any) => r.username === username);
-          }
-        } catch {
-          // fall through
-        }
+        // QOTD Status: Check if a QOTD race or competition result occurred AFTER current QOTD day start (00:00 UTC)
+        const now = new Date();
+        const today00UTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-        if (!qotdDone) {
-          qotdDone = races.some((r: any) => {
-            if (!r.date) return false;
-            const mode = (r.mode || r.gn || r.game_mode || '').toLowerCase();
-            return r.date.slice(0, 10) === today && (mode.includes('qotd') || mode === 'daily' || mode === 'competition');
-          });
-        }
+        let qotdDone = races.some((r: any) => {
+          if (!r.date) return false;
+          const mode = (r.mode || '').toLowerCase();
+          const rTime = new Date(r.date.replace(' ', 'T')).getTime();
+          return (mode.includes('qotd') || mode === 'daily' || mode === 'competition') && rTime >= today00UTC;
+        });
 
         return Response.json({
           username,
@@ -212,8 +282,8 @@ Bun.serve({
           premium: racer?.premium ?? scrapeData?.premium ?? false,
           badges: racer?.badges || scrapeData?.badges || [],
           stats: {
-            totalRaces,
-            totalWins,
+            totalRaces: totalRaces ?? races.length ?? 0,
+            totalWins: totalWins ?? races.filter((r: any) => r.won).length ?? 0,
             points: statsPoints,
             avgWpm,
             bestWpm,

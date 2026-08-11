@@ -12,12 +12,13 @@ import { renderExportButton } from "./components/ExportButton";
 import { renderCsvExportButton } from "./components/CsvExportButton";
 import { renderErrorBanner } from "./components/ErrorBanner";
 import { renderModeComparison, categorizeRaceMode } from "./components/ModeComparison";
+import { renderTextCollector } from "./components/TextCollector";
 import type { UserData, Race, Metric, TimeframeStats as TStats } from "./types";
 import { formatDisplayDate, isCompetitiveRace, sortByDate, getCookie } from "./types";
 import { getCachedRaces, saveCachedRaces, getCachedProfile, saveCachedProfile } from "./db";
 
 const WINDOW = 100;
-const raceLimitOptions = [1000, 500, 200, 100, 50, 20];
+const raceLimitOptions = [2000, 1500, 1000, 500, 200, 100, 50, 20];
 
 class App {
   /* ── State ── */
@@ -115,7 +116,7 @@ class App {
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 45000);
       const body: Record<string, string> = { username };
       if (key) {
         body.apiKey = key;
@@ -140,7 +141,7 @@ class App {
       }
 
       const freshRaces: Race[] = result.races || [];
-      const filteredFresh = freshRaces.filter((r: Race) => isCompetitiveRace(r));
+      const filteredFresh = freshRaces.filter((r: Race) => r.speed != null && r.speed > 0);
 
       // Delta Merge with IndexedDB Cache ONLY if key is present
       let mergedRaces = filteredFresh;
@@ -189,7 +190,7 @@ class App {
     this.zoomBounds = null;
     this.input = username;
 
-    const filtered = races.filter((r) => isCompetitiveRace(r));
+    const filtered = races.filter((r) => r.speed != null && r.speed > 0);
     const sorted = sortByDate(filtered).map((r) => ({ ...r, date: r.date.replace(" ", "T") }));
 
     const total = sorted.length;
@@ -197,7 +198,7 @@ class App {
     const avgWpm = speeds.reduce((s, v) => s + v, 0) / total || 0;
     const bestWpm = Math.max(...speeds) || 0;
     const totalPoints = sorted.reduce((s, r) => s + (r.points || 0), 0);
-    const totalWins = sorted.filter((r) => r.won && isCompetitiveRace(r)).length;
+    const totalWins = sorted.filter((r) => r.won).length;
 
     const allRaces = sortByDate(races).map((r) => ({ ...r, date: r.date.replace(" ", "T") }));
 
@@ -253,20 +254,20 @@ class App {
     return this.data.races.filter((r) => categorizeRaceMode(r) === this.selectedModeFilter);
   }
 
-  /* ── Calculations ── */
-  private getDerivedData() {
-    if (!this.data) return null;
-
+  /* ── Chart & Timeframe Data Preparation ── */
+  private prepareChartData() {
     const activeRaces = this.getFilteredRaces();
-    const useDateLabels = activeRaces.length > 0 && activeRaces.some((r) => !isNaN(new Date(r.date).getTime()));
+    if (!activeRaces.length) return { useDateLabels: false, rollingData: [], regression: null, timeframeStats: null };
 
-    const allChartData = sortByDate(activeRaces).map((r, i) => ({
+    const sortedRaces = sortByDate(activeRaces);
+    const allChartData = sortedRaces.map((r, i) => ({
       ...r,
-      dateLabel: useDateLabels ? formatDisplayDate(r.date) : `Race ${i + 1}`,
-      ts: useDateLabels ? new Date(r.date).getTime() : i,
+      index: i + 1,
+      ts: new Date(r.date.replace(" ", "T")).getTime(),
     }));
 
-    const zoomedData = !this.zoomBounds || !useDateLabels
+    const useDateLabels = sortedRaces.length < 50;
+    const zoomedData = !this.zoomBounds
       ? allChartData
       : allChartData.filter((d) => d.ts >= this.zoomBounds!.left && d.ts <= this.zoomBounds!.right);
 
@@ -277,7 +278,7 @@ class App {
     for (let i = 0; i < filteredData.length; i++) {
       const d = filteredData[i];
       const slice = filteredData.slice(Math.max(0, i - WINDOW + 1), i + 1);
-      const wins = slice.filter((r) => r.won && isCompetitiveRace(r)).length;
+      const wins = slice.filter((r) => r.won).length;
       cp += d.points || 0;
       rollingData.push({ ...d, speed: d.speed, accuracy: d.accuracy, winsPer100: +wins.toFixed(1), cumulativePoints: cp });
     }
@@ -306,9 +307,9 @@ class App {
           races: filteredData.length,
           avgSpeed: (filteredData.reduce((s, r) => s + r.speed, 0) / filteredData.length).toFixed(1),
           avgAcc: (filteredData.reduce((s, r) => s + r.accuracy, 0) / filteredData.length).toFixed(1),
-          wins: filteredData.filter((r) => r.won && isCompetitiveRace(r)).length,
+          wins: filteredData.filter((r) => r.won).length,
           totalPoints: filteredData.reduce((s, r) => s + (r.points || 0), 0).toFixed(0),
-          winRate: ((filteredData.filter((r) => r.won && isCompetitiveRace(r)).length / filteredData.length) * 100).toFixed(1),
+          winRate: ((filteredData.filter((r) => r.won).length / filteredData.length) * 100).toFixed(1),
         }
       : null;
 
@@ -377,7 +378,7 @@ class App {
 
     // Main Data Section
     if (this.data) {
-      const derived = this.getDerivedData();
+      const derived = this.prepareChartData();
 
       // Profile
       const profileWrap = document.createElement("div");
@@ -391,12 +392,22 @@ class App {
       if (this.data.races.length > 0 && derived) {
         // Controls Row: Mode Filter, Metric & Race Limit buttons
         const controls = document.createElement("div");
-        controls.className = "flex flex-wrap items-center justify-between gap-3";
+        controls.className = "flex flex-wrap items-center justify-between gap-3 w-full";
 
         const btnGroup = document.createElement("div");
-        btnGroup.className = "flex gap-2 flex-wrap items-center";
+        btnGroup.className = "flex flex-wrap items-center gap-3 w-full xl:w-auto";
 
-        // Mode Filter Pills
+        const getBtnCls = (active: boolean) =>
+          `h-8.5 px-2.5 text-xs font-medium border cursor-pointer inline-flex items-center justify-center whitespace-nowrap transition-colors ${
+            active
+              ? "bg-red-900 text-beige-50 border-red-900 font-bold"
+              : "bg-beige-100 dark:bg-beige-900 border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100"
+          }`;
+
+        // Mode Filter Grouping
+        const modeGroup = document.createElement("div");
+        modeGroup.className = "flex flex-wrap items-center gap-1.5";
+
         const modeOpts: { key: string; label: string }[] = [
           { key: "all", label: "All Modes" },
           { key: "multiplayer", label: "Multiplayer" },
@@ -405,75 +416,73 @@ class App {
         ];
         modeOpts.forEach((opt) => {
           const btn = document.createElement("button");
-          btn.className = `px-2.5 py-1.5 text-xs font-medium border cursor-pointer ${
-            this.selectedModeFilter === opt.key
-              ? "bg-red-900 text-beige-50 border-red-900 font-bold"
-              : "bg-beige-100 dark:bg-beige-900 border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100"
-          }`;
+          btn.className = getBtnCls(this.selectedModeFilter === opt.key);
           btn.textContent = opt.label;
           btn.addEventListener("click", () => {
             this.selectedModeFilter = opt.key;
             this.render();
           });
-          btnGroup.appendChild(btn);
+          modeGroup.appendChild(btn);
         });
+        btnGroup.appendChild(modeGroup);
 
-        const modeDivider = document.createElement("span");
-        modeDivider.className = "w-px h-5 bg-beige-300 dark:bg-beige-700 mx-1";
-        btnGroup.appendChild(modeDivider);
+        // Separator 1 (Mode -> Stat)
+        const sep1 = document.createElement("div");
+        sep1.className = "hidden xl:block w-px h-6 bg-beige-300 dark:bg-beige-700 mx-0.5 shrink-0 self-center";
+        btnGroup.appendChild(sep1);
 
-        // Metrics
+        // Stat Metrics Grouping
+        const statGroup = document.createElement("div");
+        statGroup.className = "flex flex-wrap items-center gap-1.5";
+
         (["speed", "accuracy", "points", "wins"] as Metric[]).forEach((m) => {
           const btn = document.createElement("button");
-          btn.className = `px-3 py-1.5 text-sm font-medium capitalize border cursor-pointer ${
-            this.selectedMetric === m
-              ? "bg-red-900 text-beige-50 border-red-900"
-              : "bg-beige-100 dark:bg-beige-900 border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100"
-          }`;
-          btn.textContent = m;
+          btn.className = getBtnCls(this.selectedMetric === m);
+          btn.textContent = m.charAt(0).toUpperCase() + m.slice(1);
           btn.addEventListener("click", () => {
             this.selectedMetric = m;
             this.render();
           });
-          btnGroup.appendChild(btn);
+          statGroup.appendChild(btn);
         });
+        btnGroup.appendChild(statGroup);
 
-        const divider = document.createElement("span");
-        divider.className = "w-px bg-beige-300 dark:bg-beige-700 mx-1";
-        btnGroup.appendChild(divider);
+        // Separator 2 (Stat -> Last X Races)
+        const sep2 = document.createElement("div");
+        sep2.className = "hidden xl:block w-px h-6 bg-beige-300 dark:bg-beige-700 mx-0.5 shrink-0 self-center";
+        btnGroup.appendChild(sep2);
 
-        // Race Limits
+        // Last X Races Grouping
+        const limitGroup = document.createElement("div");
+        limitGroup.className = "flex flex-wrap items-center gap-1.5";
+
+        const allBtn = document.createElement("button");
+        allBtn.className = getBtnCls(this.raceLimit === null);
+        allBtn.textContent = "All Races";
+        allBtn.addEventListener("click", () => {
+          this.raceLimit = null;
+          this.render();
+        });
+        limitGroup.appendChild(allBtn);
+
         raceLimitOptions.forEach((limit) => {
           const btn = document.createElement("button");
-          btn.className = `px-2 py-1.5 text-xs font-medium border cursor-pointer ${
-            this.raceLimit === limit
-              ? "bg-red-900 text-beige-50 border-red-900"
-              : "bg-beige-100 dark:bg-beige-900 border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100"
-          }`;
+          btn.className = getBtnCls(this.raceLimit === limit);
           btn.textContent = `Last ${limit}`;
           btn.addEventListener("click", () => {
             this.raceLimit = this.raceLimit === limit ? null : limit;
             this.render();
           });
-          btnGroup.appendChild(btn);
+          limitGroup.appendChild(btn);
         });
 
-        if (this.raceLimit) {
-          const allBtn = document.createElement("button");
-          allBtn.className = "px-2 py-1.5 text-xs font-medium bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100 cursor-pointer";
-          allBtn.textContent = "All";
-          allBtn.addEventListener("click", () => {
-            this.raceLimit = null;
-            this.render();
-          });
-          btnGroup.appendChild(allBtn);
-        }
+        btnGroup.appendChild(limitGroup);
 
         controls.appendChild(btnGroup);
 
         if (this.zoomBounds) {
           const resetBtn = document.createElement("button");
-          resetBtn.className = "px-3 py-1.5 text-sm font-medium bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700 hover:bg-beige-200 dark:hover:bg-beige-800 text-beige-900 dark:text-beige-100 cursor-pointer";
+          resetBtn.className = getBtnCls(false);
           resetBtn.textContent = "Reset Zoom";
           resetBtn.addEventListener("click", this.resetZoom);
           controls.appendChild(resetBtn);
@@ -600,6 +609,9 @@ class App {
             this.render();
           })
         );
+
+        // Text ID Collector ("Catch 'Em All") Matrix
+        container.appendChild(renderTextCollector(this.getFilteredRaces()));
       }
     }
 

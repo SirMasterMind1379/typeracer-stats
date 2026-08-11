@@ -12,7 +12,7 @@ export function renderStatsCards(data: UserData): HTMLElement {
   const items: { label: string; value: string }[] = [
     {
       label: hasApi ? "Races" : "Total Races",
-      value: s.totalRaces.toLocaleString(),
+      value: (s.totalRaces ?? data.races.length ?? 0).toLocaleString(),
     },
   ];
 

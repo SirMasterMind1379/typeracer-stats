@@ -54,8 +54,61 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
     return list;
   }
 
-  // Render DOM table markup and bind interactive click listeners
-  function update() {
+  // ── One-time header setup (search input + page size — never re-rendered) ──
+  const headerRow = document.createElement("div");
+  headerRow.className = "flex flex-wrap items-center justify-between gap-3";
+
+  const titleEl = document.createElement("h3");
+  titleEl.className = "text-sm font-semibold text-beige-700 dark:text-beige-300 uppercase tracking-wide flex items-center gap-2";
+  titleEl.textContent = `Race History (${rawRaces.length} races)`;
+  headerRow.appendChild(titleEl);
+
+  const controlsEl = document.createElement("div");
+  controlsEl.className = "flex items-center gap-2 flex-wrap";
+
+  const searchInput = document.createElement("input");
+  searchInput.id = "table-search";
+  searchInput.type = "text";
+  searchInput.placeholder = "Search mode, date, WPM...";
+  searchInput.value = filterText;
+  searchInput.className = "px-2.5 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none focus:border-red-900 dark:focus:border-red-500";
+  searchInput.addEventListener("input", () => {
+    filterText = searchInput.value;
+    currentPage = 1;
+    updateTable();
+  });
+  controlsEl.appendChild(searchInput);
+
+  const pageSelect = document.createElement("select");
+  pageSelect.id = "page-size-select";
+  pageSelect.className = "px-2 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none";
+  [25, 50, 100].forEach((n) => {
+    const opt = document.createElement("option");
+    opt.value = String(n);
+    opt.textContent = `${n} / page`;
+    if (n === pageSize) opt.selected = true;
+    pageSelect.appendChild(opt);
+  });
+  pageSelect.addEventListener("change", () => {
+    pageSize = parseInt(pageSelect.value, 10);
+    currentPage = 1;
+    updateTable();
+  });
+  controlsEl.appendChild(pageSelect);
+
+  headerRow.appendChild(controlsEl);
+  container.appendChild(headerRow);
+
+  // ── Dynamic table area (re-rendered on sort/filter/page changes) ──
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "overflow-x-auto w-full border border-beige-300 dark:border-beige-800";
+  container.appendChild(tableWrap);
+
+  const paginationWrap = document.createElement("div");
+  paginationWrap.className = "flex items-center justify-between text-xs text-beige-600 dark:text-beige-400";
+  container.appendChild(paginationWrap);
+
+  function updateTable() {
     const processed = getSortedFilteredRaces();
     const totalPages = Math.max(1, Math.ceil(processed.length / pageSize));
     if (currentPage > totalPages) currentPage = totalPages;
@@ -63,105 +116,85 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
     const startIdx = (currentPage - 1) * pageSize;
     const pageRows = processed.slice(startIdx, startIdx + pageSize);
 
-    container.innerHTML = `
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <h3 class="text-sm font-semibold text-beige-700 dark:text-beige-300 uppercase tracking-wide flex items-center gap-2">
-          Race History (${processed.length} races)
-        </h3>
-        <div class="flex items-center gap-2 flex-wrap">
-          <input
-            id="table-search"
-            type="text"
-            placeholder="Search mode, date, WPM..."
-            value="${escapeHtml(filterText)}"
-            class="px-2.5 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none focus:border-red-900 dark:focus:border-red-500"
-          />
-          <select
-            id="page-size-select"
-            class="px-2 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none"
-          >
-            <option value="25" ${pageSize === 25 ? "selected" : ""}>25 / page</option>
-            <option value="50" ${pageSize === 50 ? "selected" : ""}>50 / page</option>
-            <option value="100" ${pageSize === 100 ? "selected" : ""}>100 / page</option>
-          </select>
-        </div>
-      </div>
+    // Update title count
+    titleEl.textContent = `Race History (${processed.length} races)`;
 
-      <div class="overflow-x-auto w-full border border-beige-300 dark:border-beige-800">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-300 uppercase font-mono border-b border-beige-300 dark:border-beige-700">
-            <tr>
-              ${renderTh("raceNum", "Race #")}
-              ${renderTh("date", "Date/Time")}
-              ${renderTh("mode", "Mode")}
-              ${renderTh("speed", "WPM")}
-              ${renderTh("accuracy", "Accuracy")}
-              ${renderTh("points", "Points")}
-              ${renderTh("rank", "Rank / Racers")}
+    // Re-render table
+    tableWrap.innerHTML = `
+      <table class="w-full text-left text-xs">
+        <thead class="bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-300 uppercase font-mono border-b border-beige-300 dark:border-beige-700">
+          <tr>
+            ${renderTh("raceNum", "Race #")}
+            ${renderTh("date", "Date/Time")}
+            ${renderTh("mode", "Mode")}
+            ${renderTh("speed", "WPM")}
+            ${renderTh("accuracy", "Accuracy")}
+            ${renderTh("points", "Points")}
+            ${renderTh("rank", "Rank / Racers")}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-beige-200 dark:divide-beige-800 font-mono">
+          ${
+            pageRows.length === 0
+              ? `<tr><td colspan="7" class="py-6 text-center text-beige-600 dark:text-beige-400">No races found</td></tr>`
+              : pageRows
+                  .map(
+                    (r) => `
+            <tr class="hover:bg-beige-200/60 dark:hover:bg-beige-800/60 transition-colors">
+              <td class="py-2 px-3 text-beige-600 dark:text-beige-400">#${r.raceNum}</td>
+              <td class="py-2 px-3 text-beige-900 dark:text-beige-100">${formatDisplayDate(r.date)}</td>
+              <td class="py-2 px-3">
+                <span class="px-1.5 py-0.5 text-[10px] uppercase border ${
+                  r.mode?.toLowerCase().includes("qotd")
+                    ? "border-amber-600 bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300"
+                    : r.mode?.toLowerCase().includes("room")
+                    ? "border-purple-600 bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-300"
+                    : r.mode?.toLowerCase().includes("practice") || (r.totalRacers <= 1 && !r.mode)
+                    ? "border-blue-600 bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-300"
+                    : "border-beige-300 dark:border-beige-700 bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-300"
+                }">
+                  ${r.mode || (r.totalRacers <= 1 ? "practice" : "multiplayer")}
+                </span>
+              </td>
+              <td class="py-2 px-3 font-semibold text-beige-900 dark:text-beige-100">${r.speed.toFixed(1)}</td>
+              <td class="py-2 px-3 text-beige-700 dark:text-beige-300">${r.accuracy.toFixed(1)}%</td>
+              <td class="py-2 px-3 text-beige-700 dark:text-beige-300">${(r.points || 0).toFixed(0)}</td>
+              <td class="py-2 px-3 text-beige-700 dark:text-beige-300">
+                ${r.won ? `<span class="text-amber-600 dark:text-amber-400 font-bold">1st</span>` : `${r.rank}`} / ${r.totalRacers}
+              </td>
             </tr>
-          </thead>
-          <tbody class="divide-y divide-beige-200 dark:divide-beige-800 font-mono">
-            ${
-              pageRows.length === 0
-                ? `<tr><td colspan="7" class="py-6 text-center text-beige-600 dark:text-beige-400">No races found</td></tr>`
-                : pageRows
-                    .map(
-                      (r) => `
-              <tr class="hover:bg-beige-200/60 dark:hover:bg-beige-800/60 transition-colors">
-                <td class="py-2 px-3 text-beige-600 dark:text-beige-400">#${r.raceNum}</td>
-                <td class="py-2 px-3 text-beige-900 dark:text-beige-100">${formatDisplayDate(r.date)}</td>
-                <td class="py-2 px-3">
-                  <span class="px-1.5 py-0.5 text-[10px] uppercase border ${
-                    r.mode?.toLowerCase().includes("qotd")
-                      ? "border-amber-600 bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300"
-                      : r.mode?.toLowerCase().includes("room")
-                      ? "border-purple-600 bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-300"
-                      : r.mode?.toLowerCase().includes("practice") || (r.totalRacers <= 1 && !r.mode)
-                      ? "border-blue-600 bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-300"
-                      : "border-beige-300 dark:border-beige-700 bg-beige-200 dark:bg-beige-800 text-beige-800 dark:text-beige-300"
-                  }">
-                    ${r.mode || (r.totalRacers <= 1 ? "practice" : "multiplayer")}
-                  </span>
-                </td>
-                <td class="py-2 px-3 font-semibold text-beige-900 dark:text-beige-100">${r.speed.toFixed(1)}</td>
-                <td class="py-2 px-3 text-beige-700 dark:text-beige-300">${r.accuracy.toFixed(1)}%</td>
-                <td class="py-2 px-3 text-beige-700 dark:text-beige-300">${(r.points || 0).toFixed(0)}</td>
-                <td class="py-2 px-3 text-beige-700 dark:text-beige-300">
-                  ${r.won ? `<span class="text-amber-600 dark:text-amber-400 font-bold">1st</span>` : `${r.rank}`} / ${r.totalRacers}
-                </td>
-              </tr>
-            `
-                    )
-                    .join("")
-            }
-          </tbody>
-        </table>
-      </div>
+          `
+                  )
+                  .join("")
+          }
+        </tbody>
+      </table>
+    `;
 
-      <div class="flex items-center justify-between text-xs text-beige-600 dark:text-beige-400">
-        <span>Showing ${processed.length === 0 ? 0 : startIdx + 1}–${Math.min(startIdx + pageSize, processed.length)} of ${processed.length} races</span>
-        <div class="flex items-center gap-1">
-          <button
-            id="btn-prev-page"
-            ${currentPage <= 1 ? "disabled" : ""}
-            class="px-2 py-1 border border-beige-300 dark:border-beige-700 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed bg-beige-50 dark:bg-beige-800 text-beige-800 dark:text-beige-200 hover:bg-beige-200 dark:hover:bg-beige-700"
-          >
-            Prev
-          </button>
-          <span class="px-2">Page ${currentPage} of ${totalPages}</span>
-          <button
-            id="btn-next-page"
-            ${currentPage >= totalPages ? "disabled" : ""}
-            class="px-2 py-1 border border-beige-300 dark:border-beige-700 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed bg-beige-50 dark:bg-beige-800 text-beige-800 dark:text-beige-200 hover:bg-beige-200 dark:hover:bg-beige-700"
-          >
-            Next
-          </button>
-        </div>
+    // Re-render pagination bar
+    paginationWrap.innerHTML = `
+      <span>Showing ${processed.length === 0 ? 0 : startIdx + 1}–${Math.min(startIdx + pageSize, processed.length)} of ${processed.length} races</span>
+      <div class="flex items-center gap-1">
+        <button
+          id="btn-prev-page"
+          ${currentPage <= 1 ? "disabled" : ""}
+          class="px-2 py-1 border border-beige-300 dark:border-beige-700 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed bg-beige-50 dark:bg-beige-800 text-beige-800 dark:text-beige-200 hover:bg-beige-200 dark:hover:bg-beige-700"
+        >
+          Prev
+        </button>
+        <span class="px-2">Page ${currentPage} of ${totalPages}</span>
+        <button
+          id="btn-next-page"
+          ${currentPage >= totalPages ? "disabled" : ""}
+          class="px-2 py-1 border border-beige-300 dark:border-beige-700 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed bg-beige-50 dark:bg-beige-800 text-beige-800 dark:text-beige-200 hover:bg-beige-200 dark:hover:bg-beige-700"
+        >
+          Next
+        </button>
       </div>
     `;
 
-    // Attach Header Sort click events
-    container.querySelectorAll("th[data-sort]").forEach((th) => {
+    // Re-attach header sort listeners
+    tableWrap.querySelectorAll("th[data-sort]").forEach((th) => {
       th.addEventListener("click", () => {
         const field = th.getAttribute("data-sort") as SortField;
         if (sortField === field) {
@@ -170,38 +203,22 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
           sortField = field;
           sortOrder = "desc";
         }
-        update();
+        updateTable();
       });
     });
 
-    // Attach Search Filter event listener
-    const searchInput = container.querySelector("#table-search") as HTMLInputElement;
-    searchInput?.addEventListener("input", (e) => {
-      filterText = (e.target as HTMLInputElement).value;
-      currentPage = 1;
-      update();
-    });
-
-    // Attach Page Size selector event listener
-    const pageSelect = container.querySelector("#page-size-select") as HTMLSelectElement;
-    pageSelect?.addEventListener("change", (e) => {
-      pageSize = parseInt((e.target as HTMLSelectElement).value, 10);
-      currentPage = 1;
-      update();
-    });
-
     // Attach Pagination click event listeners
-    container.querySelector("#btn-prev-page")?.addEventListener("click", () => {
+    paginationWrap.querySelector("#btn-prev-page")?.addEventListener("click", () => {
       if (currentPage > 1) {
         currentPage--;
-        update();
+        updateTable();
       }
     });
 
-    container.querySelector("#btn-next-page")?.addEventListener("click", () => {
+    paginationWrap.querySelector("#btn-next-page")?.addEventListener("click", () => {
       if (currentPage < totalPages) {
         currentPage++;
-        update();
+        updateTable();
       }
     });
   }
@@ -217,7 +234,7 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
     `;
   }
 
-  update();
+  updateTable();
   return container;
 }
 

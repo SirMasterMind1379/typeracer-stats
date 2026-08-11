@@ -74,9 +74,9 @@ export interface TimeframeStats {
   winRate: string;
 }
 
-/** Whether a race is "competitive" (multiplayer, not QOTD). */
+/** Whether a race is valid to render (valid speed > 0). */
 export function isCompetitiveRace(r: Race): boolean {
-  return (r.totalRacers ?? 0) > 1 || (!!r.mode && !r.mode.toLowerCase().includes("qotd"));
+  return r.speed != null && r.speed > 0;
 }
 
 /** Sort races chronologically by date. */

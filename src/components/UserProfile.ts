@@ -148,11 +148,11 @@ export function renderUserProfile(data: UserData, dataSource: "api" | "import" |
           rel="noopener noreferrer"
           class="px-3 py-1.5 text-sm font-medium border inline-block ${
             data.qotdDone
-              ? "bg-red-900 text-beige-50 border-red-950 dark:bg-red-900 dark:text-beige-100 dark:border-red-700"
+              ? "bg-emerald-700 text-white border-emerald-800 dark:bg-emerald-800 dark:text-emerald-100 dark:border-emerald-600"
               : "bg-beige-50 dark:bg-beige-800 border-beige-300 dark:border-beige-700 text-beige-700 dark:text-beige-300"
           }"
         >
-          QOTD: ${data.qotdDone ? "Done" : "Not Done"}
+          QOTD: ${data.qotdDone ? "Done ✓" : "Not Done"}
         </a>
         <span id="qotd-countdown" class="text-[10px] text-beige-600 dark:text-beige-400">${getCountdownText()}</span>
       </div>

@@ -30,6 +30,11 @@ The helper `formatDisplayDate()` in `src/types.ts` implements this. Use it where
 - **No PostCSS Files**: Do NOT create `postcss.config.*` files or add `"postcss"` keys to `package.json`. Tailwind CSS v4 is handled natively via `@tailwindcss/vite`.
 - **Server Cache Clear**: If Vite dev server caches PostCSS error handles on Windows, terminate the running Vite dev server task before launching a fresh dev server instance.
 
+## Data Fetching & QOTD Invariants
+- **Pit History Scraper Fallback (1,000+ Races)**: TypeRacer's JSON API caps at 1,000 races. Backend handlers (`server.ts`, `api/user-stats.ts`) MUST automatically call `scrapeHistoryPages(username, 11, 25)` (`https://data.typeracer.com/pit/race_history?user={username}&n=100&p={page}`) whenever the primary API returns 1,000 races, ensuring 100% of all lifetime races (1,459+) are loaded into IndexedDB.
+- **QOTD Daily Reset Timestamp Calculation**: Daily QOTD resets at **00:00 UTC** (8:00 PM EDT). Always calculate `today00UTC` (`Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())`). `qotdDone` MUST ONLY evaluate to `true` if a QOTD race or competition result occurred **after `today00UTC`**. Do NOT rely on permanent profile badges.
+- **Zero-Filter Race Preservation**: NEVER filter out valid races (`speed > 0`). Retain all races (multiplayer, practice, solo, QOTD), tag each race with its mode, and permit mode filtering exclusively via UI controls (`All Races`, `Multiplayer`, `Practice`, `QOTD`).
+
 ## Testing & Privacy Constraints
 - **Browser Subagent QA**: Automatically run the `browser` subagent to test local applications (`http://localhost:1384`) after major iterations.
 - **Credential Privacy**: NEVER write down or commit user API keys, passwords, or private tokens into persistent documentation or codebase files. Keep secrets strictly transient in chat memory.

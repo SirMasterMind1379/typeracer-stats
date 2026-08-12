@@ -87,14 +87,14 @@ export class RecentRacesWidget {
       `;
     }).join("");
 
-    // Build List Items (Clean format, no emojis, valid Text ID link or span)
+    // Build List Items (Clean format, no emojis, valid Text ID link or clean em-dash)
     const listHtml = recent10.map((r, index) => {
       const isNew = index === 0 && highlightNew;
       const raceUrl = this.buildTypeRacerResultUrl(r, username);
 
       const tidHtml = r.textId && r.textId > 0
         ? `<a href="https://data.typeracer.com/pit/text_info?id=${r.textId}" target="_blank" rel="noopener" class="tr-tid-link" title="View quote text info on TypeRacer">#${r.textId}</a>`
-        : `<span class="tr-tid-muted">#--</span>`;
+        : `<span class="tr-tid-muted">&mdash;</span>`;
 
       return `
         <div class="tr-race-item ${isNew ? 'new-item' : ''}">

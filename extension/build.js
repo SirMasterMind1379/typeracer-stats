@@ -45,14 +45,29 @@ async function buildExtensionAndUserscript() {
   fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2) + '\n', 'utf-8');
   fs.writeFileSync(path.resolve(outDirExtension, 'manifest.json'), JSON.stringify(manifestData, null, 2) + '\n', 'utf-8');
 
-  // 3. Copy Custom Icon Files (.jpg)
+  // 3. Copy Custom PNG Icon Files
   const iconSizes = [16, 48, 128];
-  const customIconPath = path.resolve(__dirname, 'icons/icon.jpg');
-  if (fs.existsSync(customIconPath)) {
-    fs.copyFileSync(customIconPath, path.resolve(outDirExtension, 'icons/icon.jpg'));
-    fs.copyFileSync(customIconPath, path.resolve(outDirExtension, 'icon.jpg'));
+  const customPngPath = path.resolve(__dirname, 'icons/icon.png');
+  const customJpgPath = path.resolve(__dirname, 'icons/icon.jpg');
+
+  if (fs.existsSync(customPngPath)) {
+    fs.copyFileSync(customPngPath, path.resolve(outDirExtension, 'icons/icon.png'));
+    fs.copyFileSync(customPngPath, path.resolve(outDirExtension, 'icon.png'));
     for (const size of iconSizes) {
-      fs.copyFileSync(customIconPath, path.resolve(outDirExtension, `icons/icon${size}.jpg`));
+      const srcFile = path.resolve(__dirname, `icons/icon${size}.png`);
+      if (fs.existsSync(srcFile)) {
+        fs.copyFileSync(srcFile, path.resolve(outDirExtension, `icons/icon${size}.png`));
+      } else {
+        fs.copyFileSync(customPngPath, path.resolve(outDirExtension, `icons/icon${size}.png`));
+      }
+    }
+  }
+
+  if (fs.existsSync(customJpgPath)) {
+    fs.copyFileSync(customJpgPath, path.resolve(outDirExtension, 'icons/icon.jpg'));
+    fs.copyFileSync(customJpgPath, path.resolve(outDirExtension, 'icon.jpg'));
+    for (const size of iconSizes) {
+      fs.copyFileSync(customJpgPath, path.resolve(outDirExtension, `icons/icon${size}.jpg`));
     }
   }
 

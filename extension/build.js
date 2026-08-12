@@ -35,11 +35,15 @@ async function buildExtensionAndUserscript() {
     minify: false,
   });
 
-  // 2. Copy Manifest V3
-  fs.copyFileSync(
-    path.resolve(__dirname, 'manifest.json'),
-    path.resolve(outDirExtension, 'manifest.json')
-  );
+  // Read version from root package.json
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(rootDir, 'package.json'), 'utf-8'));
+
+  // 2. Copy and sync Manifest V3 version
+  const manifestPath = path.resolve(__dirname, 'manifest.json');
+  const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  manifestData.version = pkg.version;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2) + '\n', 'utf-8');
+  fs.writeFileSync(path.resolve(outDirExtension, 'manifest.json'), JSON.stringify(manifestData, null, 2) + '\n', 'utf-8');
 
   // 3. Copy Custom Icon Files (.jpg)
   const iconSizes = [16, 48, 128];
@@ -56,8 +60,11 @@ async function buildExtensionAndUserscript() {
     }
   }
 
-  // 4. Bundle Userscript (.user.js)
-  const headerContent = fs.readFileSync(path.resolve(__dirname, 'userscript-header.js'), 'utf-8');
+  // 4. Bundle Userscript (.user.js) with synced version header
+  let headerContent = fs.readFileSync(path.resolve(__dirname, 'userscript-header.js'), 'utf-8');
+  headerContent = headerContent.replace(/\/\/\s*@version\s+.*/, `// @version      ${pkg.version}`);
+  fs.writeFileSync(path.resolve(__dirname, 'userscript-header.js'), headerContent, 'utf-8');
+
   const compiledContent = fs.readFileSync(path.resolve(outDirExtension, 'content.js'), 'utf-8');
 
   const userscriptFinal = `${headerContent.trim()}\n\n${compiledContent}\n`;

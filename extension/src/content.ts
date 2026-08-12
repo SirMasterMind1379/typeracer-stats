@@ -92,7 +92,7 @@ class TypeRacerOverlayApp {
         styleEl = document.createElement("style");
         styleEl.id = "tr-clean-upsells-style";
         styleEl.textContent = `
-          /* TypeRacer Premium Upsell & Ad Element Cleaner - All Subdomains */
+          /* TypeRacer Premium Upsell & Ad Element Cleaner */
           .premiumBanner,
           .sidebarAd,
           .ad-container,
@@ -115,9 +115,7 @@ class TypeRacerOverlayApp {
           .rankTable-upsell,
           .profileTableHeader__premium,
           .profileTable__row--upsell,
-          .b-premium-upsell,
-          div[class*="premium"],
-          div[class*="upsell"] {
+          .b-premium-upsell {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;

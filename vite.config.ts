@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+import { readFileSync } from 'fs';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
 
 export default defineConfig({
   base: './',
@@ -17,6 +20,6 @@ export default defineConfig({
     },
   },
   define: {
-    'process.env.APP_VERSION': JSON.stringify('2.0.1'),
+    'process.env.APP_VERSION': JSON.stringify(pkg.version),
   },
 });

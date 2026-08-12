@@ -1,3 +1,5 @@
+import pkg from "../../package.json";
+
 export type ThemeMode = "auto" | "light" | "dark";
 
 export function renderHeader(themeMode: ThemeMode, resolvedDark: boolean, onToggle: () => void): HTMLElement {
@@ -38,7 +40,7 @@ export function renderHeader(themeMode: ThemeMode, resolvedDark: boolean, onTogg
         rel="noopener noreferrer"
         class="ml-2 text-xs font-normal text-beige-600 dark:text-beige-400 hover:text-beige-800 dark:hover:text-beige-200 align-baseline"
       >
-        v2.2.0
+        v${pkg.version}
       </a>
     </h1>
     <div class="flex items-center gap-2">

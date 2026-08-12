@@ -52,6 +52,7 @@ export class RecentRacesWidget {
     const wpms = recent10.map((r) => r.speed);
     const maxWpm = Math.max(...wpms, 120);
     const minWpm = Math.max(0, Math.min(...wpms) - 10);
+    const avgWpmVal = (wpms.reduce((a, b) => a + b, 0) / wpms.length).toFixed(1);
 
     // SVG Line Chart Dimensions
     const svgWidth = 280;
@@ -75,19 +76,19 @@ export class RecentRacesWidget {
     const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
     const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)},${svgHeight} L ${points[0].x.toFixed(1)},${svgHeight} Z`;
 
-    // Data Point Circle Markers & Labels (Clickable Links)
+    // Data Point Circle Markers & Labels (Clickable Links with 1 decimal place)
     const circlesSvg = points.map((p) => {
       const circleR = p.isNewest ? 4.5 : 3.5;
       const strokeW = p.isNewest ? 2 : 1.5;
       return `
         <a href="${p.url}" target="_blank" rel="noopener" class="tr-point-group">
           <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${circleR}" fill="${p.isNewest ? '#ffffff' : '#ef4444'}" stroke="#9e1b24" stroke-width="${strokeW}" />
-          <text x="${p.x.toFixed(1)}" y="${(p.y - 6).toFixed(1)}" font-size="8" fill="${p.isNewest ? '#ffffff' : '#d1d5db'}" text-anchor="middle" font-weight="${p.isNewest ? '800' : '600'}">${p.speed}</text>
+          <text x="${p.x.toFixed(1)}" y="${(p.y - 6).toFixed(1)}" font-size="8" fill="${p.isNewest ? '#ffffff' : '#d1d5db'}" text-anchor="middle" font-weight="${p.isNewest ? '800' : '600'}">${p.speed.toFixed(1)}</text>
         </a>
       `;
     }).join("");
 
-    // Build List Items (Clean format, no emojis, valid Text ID link or clean em-dash)
+    // Build List Items (WPM with 1 decimal digit, valid Text ID link or clean em-dash)
     const listHtml = recent10.map((r, index) => {
       const isNew = index === 0 && highlightNew;
       const raceUrl = this.buildTypeRacerResultUrl(r, username);
@@ -98,7 +99,7 @@ export class RecentRacesWidget {
 
       return `
         <div class="tr-race-item ${isNew ? 'new-item' : ''}">
-          <span class="tr-race-wpm">${r.speed} WPM <span style="font-size: 10px; opacity: 0.65; font-weight: 500;">(${r.accuracy.toFixed(1)}%)</span></span>
+          <span class="tr-race-wpm">${r.speed.toFixed(1)} WPM <span style="font-size: 10px; opacity: 0.65; font-weight: 500;">(${r.accuracy.toFixed(1)}%)</span></span>
           ${tidHtml}
           <a href="${raceUrl}" target="_blank" rel="noopener" class="tr-race-link" title="View pit result details">Result ↗</a>
         </div>
@@ -109,7 +110,7 @@ export class RecentRacesWidget {
       <div class="tr-card">
         <div class="tr-card-title">
           <span>Multiplayer Progression</span>
-          <span style="color: #ef4444; font-weight: 700;">Avg: ${Math.round(wpms.reduce((a, b) => a + b, 0) / wpms.length)} WPM</span>
+          <span style="color: #ef4444; font-weight: 700;">Avg: ${avgWpmVal} WPM</span>
         </div>
 
         <div class="tr-sparkline-box">

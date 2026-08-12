@@ -22,7 +22,7 @@ export class StreakWidget {
       ? `<span class="tr-badge done">Completed ✓</span>`
       : `<span class="tr-badge pending">Pending ❌</span>`;
 
-    const bestTodayText = info.bestWpmToday ? `⚡ Best Today: <strong>${info.bestWpmToday} WPM</strong>` : "Best Today: --";
+    const bestTodayText = info.bestWpmToday != null ? `Best Today: <strong>${info.bestWpmToday.toFixed(1)} WPM</strong>` : "Best Today: --";
 
     this.container.innerHTML = `
       <div class="tr-card">

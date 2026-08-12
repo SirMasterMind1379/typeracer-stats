@@ -29,8 +29,8 @@ export class QuoteHistoryWidget {
         <div class="tr-quote-banner repeat-text">
           <strong>🔁 Previously Typed (${record.timesTyped}x)</strong>
           <div class="tr-quote-stats">
-            <span>Last: <strong>${record.lastSpeed} WPM</strong> (${record.lastAccuracy}%)</span>
-            <span>Best: <strong>${record.bestSpeed} WPM</strong></span>
+            <span>Last: <strong>${record.lastSpeed.toFixed(1)} WPM</strong> (${record.lastAccuracy.toFixed(1)}%)</span>
+            <span>Best: <strong>${record.bestSpeed.toFixed(1)} WPM</strong></span>
           </div>
         </div>
       </div>
@@ -42,14 +42,14 @@ export class QuoteHistoryWidget {
       this.container.innerHTML = `
         <div class="tr-card">
           <div class="tr-quote-banner new-text">
-            ✨ First completion saved! Baseline: <strong>${newRace.speed} WPM</strong> (${newRace.accuracy}% Acc).
+            ✨ First completion saved! Baseline: <strong>${newRace.speed.toFixed(1)} WPM</strong> (${newRace.accuracy.toFixed(1)}% Acc).
           </div>
         </div>
       `;
       return;
     }
 
-    const wpmDiff = newRace.speed - previousRecord.lastSpeed;
+    const wpmDiff = Number((newRace.speed - previousRecord.lastSpeed).toFixed(1));
     const accDiff = Number((newRace.accuracy - previousRecord.lastAccuracy).toFixed(1));
 
     const isGain = wpmDiff >= 0;
@@ -63,7 +63,7 @@ export class QuoteHistoryWidget {
     this.container.innerHTML = `
       <div class="tr-card">
         <div class="tr-delta-pill ${pillClass}">
-          <span>${icon} <strong>${sign}${wpmDiff} WPM</strong> vs last time (${previousRecord.lastSpeed} WPM)${accText}</span>
+          <span>${icon} <strong>${sign}${wpmDiff.toFixed(1)} WPM</strong> vs last time (${previousRecord.lastSpeed.toFixed(1)} WPM)${accText}</span>
         </div>
       </div>
     `;

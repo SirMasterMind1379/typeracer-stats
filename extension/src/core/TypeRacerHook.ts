@@ -104,7 +104,7 @@ export class TypeRacerHook {
         const race: ExtensionRace = {
           id: raceId,
           date: item.t ? (typeof item.t === 'number' ? new Date(item.t * 1000).toISOString() : String(item.t)) : new Date().toISOString(),
-          speed: Math.round(Number(item.wpm)),
+          speed: Number(Number(item.wpm).toFixed(1)),
           accuracy: item.acc != null ? Number((item.acc * (item.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
           points: item.pts != null ? Number(item.pts) : null,
           rank: item.r || 1,
@@ -191,11 +191,11 @@ export class TypeRacerHook {
         }
 
         if (this.lastHandledRaceId !== raceId) {
-          const wpmMatch = document.body.innerText.match(/(\d+)\s*wpm/i);
+          const wpmMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*wpm/i);
           const accMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*%\s*accuracy/i);
 
           if (wpmMatch) {
-            const wpm = parseInt(wpmMatch[1], 10);
+            const wpm = parseFloat(wpmMatch[1]);
             const acc = accMatch ? parseFloat(accMatch[1]) : 100;
 
             this.isRaceInProgress = false;
@@ -205,8 +205,8 @@ export class TypeRacerHook {
             const race: ExtensionRace = {
               id: raceId,
               date: new Date().toISOString(),
-              speed: wpm,
-              accuracy: acc,
+              speed: Number(wpm.toFixed(1)),
+              accuracy: Number(acc.toFixed(1)),
               points: null,
               rank: 1,
               totalRacers: 5,

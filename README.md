@@ -1,11 +1,11 @@
-# ⌨️ TypeRacer Stats V2 (v2.2.0)
+# ⌨️ TypeRacer Stats V2 (v2.2.1)
 
 > **Production-Grade TypeRacer Analytics & Race History Visualizer**  
 > Built with Pure Vanilla TypeScript, Vite 6, Tailwind CSS v4, and Native API Proxying. Zero heavy UI frameworks.
 
 [![Live Demo on Vercel](https://img.shields.io/badge/Vercel_Deployment-Live_Demo-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://typeracer-stats.vercel.app)
 [![Live Demo on GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Live_Demo-222222?style=for-the-badge&logo=github&logoColor=white)](https://sirmastermind1379.github.io/typeracer-stats/)
-[![Release v2.2.0](https://img.shields.io/badge/Release-v2.2.0-800000?style=for-the-badge)](https://github.com/SirMasterMind1379/typeracer-stats/releases/tag/v2.2.0)
+[![Release v2.2.1](https://img.shields.io/badge/Release-v2.2.1-800000?style=for-the-badge)](https://github.com/SirMasterMind1379/typeracer-stats/releases/tag/v2.2.1)
 
 ---
 
@@ -16,7 +16,7 @@
 
 ---
 
-## ✨ Features & Highlights (v2.2.0)
+## ✨ Features & Highlights (v2.2.1)
 
 - **⚡ Zero-Framework Architecture**: High-performance pure DOM TypeScript rendering under 72KB gzipped bundle.
 - **🔄 Auto-Theme & System Preference**: Defaults to `"auto"` mode catching browser/OS `prefers-color-scheme`. 3-way toggle button (`💻 AUTO` ➔ `☀️ LIGHT` ➔ `🌙 DARK`) with real-time OS preference change listeners.

@@ -1,5 +1,5 @@
 import type { UserData } from "../types";
-import { formatDisplayDate, computeStreak } from "../types";
+import { formatDisplayDate, computeStreak, escapeHtml } from "../types";
 
 export function renderUserProfile(data: UserData, dataSource: "api" | "import" | "cache" | null): HTMLElement {
   const container = document.createElement("div");
@@ -9,11 +9,14 @@ export function renderUserProfile(data: UserData, dataSource: "api" | "import" |
 
   const streak = computeStreak(data.races);
   const streakYesterday = computeStreak(data.races, { offsetDays: 1 });
-  const streak10 = computeStreak(data.races, { minRaces: 10 });
-  const streak10Yesterday = computeStreak(data.races, { minRaces: 10, offsetDays: 1 });
+
+  // 10+ streak counts only multiplayer races (QOTD excluded)
+  const mpRaces = data.races.filter((r) => !r.mode?.toLowerCase().includes("qotd"));
+  const streak10 = computeStreak(mpRaces, { minRaces: 10 });
+  const streak10Yesterday = computeStreak(mpRaces, { minRaces: 10, offsetDays: 1 });
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const todayCount = data.races.filter((r) => r.date.slice(0, 10) === todayStr).length;
+  const todayCount = mpRaces.filter((r) => r.date.slice(0, 10) === todayStr).length;
 
   const activeStreak = streak > 0;
   const activeStreak10 = streak10 > 0;
@@ -162,8 +165,4 @@ export function renderUserProfile(data: UserData, dataSource: "api" | "import" |
   `;
 
   return container;
-}
-
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

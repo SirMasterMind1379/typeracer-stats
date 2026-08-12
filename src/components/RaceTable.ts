@@ -1,11 +1,21 @@
 import type { Race } from "../types";
 import { formatDisplayDate } from "../types";
 
-type SortField = "raceNum" | "date" | "mode" | "speed" | "accuracy" | "points" | "rank";
+type SortField = "raceNum" | "date" | "mode" | "speed" | "accuracy" | "points" | "rank" | "textId";
 type SortOrder = "asc" | "desc";
 
 export interface RaceTableProps {
   races: Race[];
+  username?: string;
+}
+
+function getRaceResultUrl(r: Race & { raceNum: number }, defaultUsername?: string): string {
+  if (r.id && typeof r.id === "string" && r.id.startsWith("|tr:")) {
+    return `https://data.typeracer.com/pit/result?id=${r.id}`;
+  }
+  const user = defaultUsername || "sir_master_mind";
+  const num = r.id && !isNaN(Number(r.id)) ? r.id : r.raceNum;
+  return `https://data.typeracer.com/pit/result?id=|tr:${user}|${num}`;
 }
 
 // Sortable, Filterable Race History Data Table (ASC/DESC column sorting, instant string search, pagination)
@@ -32,7 +42,8 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
           r.mode?.toLowerCase().includes(q) ||
           formatDisplayDate(r.date).toLowerCase().includes(q) ||
           String(r.speed).includes(q) ||
-          String(r.raceNum).includes(q)
+          String(r.raceNum).includes(q) ||
+          String(r.textId).includes(q)
       );
     }
 
@@ -69,9 +80,9 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
   const searchInput = document.createElement("input");
   searchInput.id = "table-search";
   searchInput.type = "text";
-  searchInput.placeholder = "Search mode, date, WPM...";
+  searchInput.placeholder = "Search mode, date, WPM, text ID...";
   searchInput.value = filterText;
-  searchInput.className = "px-2.5 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none focus:border-red-900 dark:focus:border-red-500";
+  searchInput.className = "px-2.5 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none focus:border-red-900 dark:focus:border-red-500 font-mono";
   searchInput.addEventListener("input", () => {
     filterText = searchInput.value;
     currentPage = 1;
@@ -81,7 +92,7 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
 
   const pageSelect = document.createElement("select");
   pageSelect.id = "page-size-select";
-  pageSelect.className = "px-2 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none";
+  pageSelect.className = "px-2 py-1 text-xs bg-beige-50 dark:bg-beige-800 border border-beige-300 dark:border-beige-700 text-beige-900 dark:text-beige-100 focus:outline-none font-mono";
   [10, 25, 50, 100].forEach((n) => {
     const opt = document.createElement("option");
     opt.value = String(n);
@@ -105,7 +116,7 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
   container.appendChild(tableWrap);
 
   const paginationWrap = document.createElement("div");
-  paginationWrap.className = "flex items-center justify-between text-xs text-beige-600 dark:text-beige-400";
+  paginationWrap.className = "flex items-center justify-between text-xs text-beige-600 dark:text-beige-400 font-mono";
   container.appendChild(paginationWrap);
 
   function updateTable() {
@@ -131,17 +142,29 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
             ${renderTh("accuracy", "Accuracy")}
             ${renderTh("points", "Points")}
             ${renderTh("rank", "Rank / Racers")}
+            ${renderTh("textId", "Text ID")}
           </tr>
         </thead>
         <tbody class="divide-y divide-beige-200 dark:divide-beige-800 font-mono">
           ${
             pageRows.length === 0
-              ? `<tr><td colspan="7" class="py-6 text-center text-beige-600 dark:text-beige-400">No races found</td></tr>`
+              ? `<tr><td colspan="8" class="py-6 text-center text-beige-600 dark:text-beige-400">No races found</td></tr>`
               : pageRows
                   .map(
                     (r) => `
             <tr class="hover:bg-beige-200/60 dark:hover:bg-beige-800/60 transition-colors">
-              <td class="py-2 px-3 text-beige-600 dark:text-beige-400">#${r.raceNum}</td>
+              <td class="py-2 px-3">
+                <a
+                  href="${getRaceResultUrl(r, props.username)}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="font-bold text-red-900 dark:text-red-400 hover:underline inline-flex items-center gap-1"
+                  title="View Race #${r.raceNum} result on TypeRacer"
+                >
+                  #${r.raceNum}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              </td>
               <td class="py-2 px-3 text-beige-900 dark:text-beige-100">${formatDisplayDate(r.date)}</td>
               <td class="py-2 px-3">
                 ${(() => {
@@ -165,6 +188,22 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
               <td class="py-2 px-3 text-beige-700 dark:text-beige-300">${(r.points || 0).toFixed(0)}</td>
               <td class="py-2 px-3 text-beige-700 dark:text-beige-300">
                 ${r.won ? `<span class="text-amber-600 dark:text-amber-400 font-bold">1st</span>` : `${r.rank}`} / ${r.totalRacers}
+              </td>
+              <td class="py-2 px-3 text-[11px]">
+                ${
+                  r.textId && r.textId > 0
+                    ? `<a
+                        href="https://data.typeracer.com/pit/text_info?info_retry=1&id=${r.textId}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-red-900 dark:text-red-400 font-bold hover:underline inline-flex items-center gap-1"
+                        title="View Text #${r.textId} info on TypeRacer"
+                      >
+                        #${r.textId}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>`
+                    : `<span class="text-beige-500 dark:text-beige-400">—</span>`
+                }
               </td>
             </tr>
           `
@@ -242,6 +281,3 @@ export function renderRaceTable(props: RaceTableProps): HTMLElement {
   return container;
 }
 
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}

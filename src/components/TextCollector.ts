@@ -1,5 +1,5 @@
 import type { Race } from "../types";
-import { formatDisplayDate } from "../types";
+import { formatDisplayDate, escapeHtml } from "../types";
 
 export interface UniqueQuoteStats {
   textId: number;
@@ -346,9 +346,17 @@ function renderNormalGrid(items: UniqueQuoteStats[], selectedQuoteId: number | n
               } p-3 flex flex-col justify-between cursor-pointer select-none transition-all shadow-xs"
             >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-bold text-beige-900 dark:text-beige-100">
+                <a
+                  href="https://data.typeracer.com/pit/text_info?info_retry=1&id=${q.textId}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onclick="event.stopPropagation()"
+                  class="text-xs font-bold text-red-900 dark:text-red-400 hover:underline inline-flex items-center gap-1"
+                  title="Open Text #${q.textId} info on TypeRacer"
+                >
                   #${q.textId}
-                </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
                 ${
                   q.count > 1
                     ? `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-400 dark:border-amber-700">${q.count}x</span>`
@@ -572,8 +580,4 @@ function renderQuoteSparkline(races: Race[]): string {
       </div>
     </div>
   `;
-}
-
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

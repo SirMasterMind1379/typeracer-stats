@@ -14,7 +14,7 @@ import { renderErrorBanner } from "./components/ErrorBanner";
 import { renderModeComparison, categorizeRaceMode } from "./components/ModeComparison";
 import { renderTextCollector, type TextCollectorState } from "./components/TextCollector";
 import type { UserData, Race, Metric, TimeframeStats } from "./types";
-import { formatDisplayDate, isCompetitiveRace, sortByDate, getCookie } from "./types";
+import { formatDisplayDate, sortByDate, getCookie } from "./types";
 import { getCachedRaces, saveCachedRaces, getCachedProfile, saveCachedProfile } from "./db";
 
 const WINDOW = 100;
@@ -607,7 +607,7 @@ class App {
 
         container.appendChild(heatmapBox);
 
-        container.appendChild(renderRaceTable({ races: this.getFilteredRaces() }));
+        container.appendChild(renderRaceTable({ races: this.getFilteredRaces(), username: this.data.username }));
 
         container.appendChild(
           renderModeComparison(this.data.races, (modeKey) => {

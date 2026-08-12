@@ -54,7 +54,11 @@ export function renderActivityHeatmap(props: ActivityHeatmapProps): HTMLElement 
 
   // Heatmap intensity color calculation based on daily points earned
   function cellColor(points: number, count: number): string {
-    if (count === 0) return dark ? "bg-beige-900/60" : "bg-beige-200/60";
+    if (count === 0) {
+      return dark
+        ? "bg-[#2a2224] border border-[#423437]"
+        : "bg-beige-200/50 border border-beige-300/60";
+    }
     const intensity = Math.min(1, points / maxPoints);
     if (dark) {
       const levels = ["bg-red-950", "bg-red-900", "bg-red-800", "bg-red-700", "bg-red-600", "bg-red-500"];

@@ -1,5 +1,4 @@
 import type { Race } from "../types";
-import { formatDisplayDate } from "../types";
 
 export interface ModeMetrics {
   name: string;

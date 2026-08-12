@@ -39,11 +39,110 @@ export class QuoteStore {
     return this.dbPromise;
   }
 
+  public async syncFromAPI(username: string): Promise<ExtensionRace[]> {
+    if (!username) return [];
+
+    // 1. Chrome Extension Background Messaging (Bypasses CORS via Service Worker)
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id && chrome.runtime.sendMessage) {
+      try {
+        const res: any = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ type: "FETCH_RACES", username }, (response) => {
+            if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
+              resolve(null);
+            } else {
+              resolve(response);
+            }
+          });
+        });
+
+        if (res && res.success && Array.isArray(res.races) && res.races.length > 0) {
+          this.recentRacesMemory = res.races;
+          for (const r of res.races) {
+            await this.saveRace(r, username);
+          }
+          return res.races;
+        }
+      } catch {
+        // Ignore extension background messaging error
+      }
+    }
+
+    // 2. Tampermonkey GM_xmlhttpRequest Fallback (Bypasses CORS for Userscript)
+    if (typeof (window as any).GM_xmlhttpRequest === "function") {
+      try {
+        const jsonText: string = await new Promise((resolve, reject) => {
+          (window as any).GM_xmlhttpRequest({
+            method: "GET",
+            url: `https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`,
+            onload: (res: any) => resolve(res.responseText),
+            onerror: (err: any) => reject(err),
+          });
+        });
+        const rawRaces = JSON.parse(jsonText);
+        if (Array.isArray(rawRaces)) {
+          const races: ExtensionRace[] = rawRaces.map((r: any) => ({
+            id: String(r.rid),
+            date: r.t ? (typeof r.t === 'number' ? new Date(r.t * 1000).toISOString() : String(r.t)) : new Date().toISOString(),
+            speed: Math.round(Number(r.wpm)),
+            accuracy: r.acc != null ? Number((r.acc * (r.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
+            points: r.pts != null ? Number(r.pts) : null,
+            rank: r.r || 1,
+            totalRacers: r.nr || 1,
+            textId: r.tid || 0,
+            won: r.r === 1,
+            mode: r.gn || r.mode || "multiplayer",
+          }));
+          if (races.length > 0) {
+            this.recentRacesMemory = races;
+            for (const r of races) await this.saveRace(r, username);
+            return races;
+          }
+        }
+      } catch {
+        // Ignore GM fetch error
+      }
+    }
+
+    // 3. Direct fetch fallback (quietly catch page CORS blocks)
+    try {
+      const res = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`);
+      if (res.ok) {
+        const json = await res.json();
+        const rawRaces = Array.isArray(json) ? json : [];
+        const races: ExtensionRace[] = rawRaces.map((r: any) => ({
+          id: String(r.rid),
+          date: r.t ? (typeof r.t === 'number' ? new Date(r.t * 1000).toISOString() : String(r.t)) : new Date().toISOString(),
+          speed: Math.round(Number(r.wpm)),
+          accuracy: r.acc != null ? Number((r.acc * (r.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
+          points: r.pts != null ? Number(r.pts) : null,
+          rank: r.r || 1,
+          totalRacers: r.nr || 1,
+          textId: r.tid || 0,
+          won: r.r === 1,
+          mode: r.gn || r.mode || "multiplayer",
+        }));
+
+        if (races.length > 0) {
+          this.recentRacesMemory = races;
+          for (const r of races) {
+            await this.saveRace(r, username);
+          }
+          return races;
+        }
+      }
+    } catch {
+      // Quietly swallow CORS error in page context since background worker handles it
+    }
+
+    return [];
+  }
+
   public async saveRace(race: ExtensionRace, username: string = "local_user"): Promise<void> {
-    // Add to memory list
-    this.recentRacesMemory.unshift(race);
-    if (this.recentRacesMemory.length > 50) {
-      this.recentRacesMemory.pop();
+    if (!this.recentRacesMemory.some(r => r.id === race.id)) {
+      this.recentRacesMemory.unshift(race);
+      if (this.recentRacesMemory.length > 50) {
+        this.recentRacesMemory.pop();
+      }
     }
 
     try {
@@ -88,8 +187,10 @@ export class QuoteStore {
     // Save to localStorage as quick fallback
     try {
       const stored = JSON.parse(localStorage.getItem("tr_overlay_recent_races") || "[]");
-      stored.unshift(race);
-      localStorage.setItem("tr_overlay_recent_races", JSON.stringify(stored.slice(0, 20)));
+      if (!stored.some((r: any) => r.id === race.id)) {
+        stored.unshift(race);
+        localStorage.setItem("tr_overlay_recent_races", JSON.stringify(stored.slice(0, 20)));
+      }
     } catch {
       // Fallback ignore
     }
@@ -111,7 +212,7 @@ export class QuoteStore {
   }
 
   public async getRecentRaces(limit = 10): Promise<ExtensionRace[]> {
-    if (this.recentRacesMemory.length >= limit) {
+    if (this.recentRacesMemory.length > 0) {
       return this.recentRacesMemory.slice(0, limit);
     }
     

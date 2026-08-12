@@ -1,4 +1,5 @@
 import domtoimage from "dom-to-image-more";
+import { escapeHtml } from "../types";
 
 export function renderExportButton(targetId: string, filename: string): HTMLElement {
   const container = document.createElement("div");
@@ -67,8 +68,4 @@ export function renderExportButton(targetId: string, filename: string): HTMLElem
 
   update();
   return container;
-}
-
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

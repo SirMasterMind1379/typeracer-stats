@@ -1,7 +1,7 @@
-/* TypeRacer Stats Overlay - ShadowDOM Styles */
+/* TypeRacer Stats Overlay - Boxy Web Build Aesthetic Styles */
 :host {
   all: initial;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   box-sizing: border-box;
 }
 
@@ -11,37 +11,69 @@
   padding: 0;
 }
 
+/* ==========================================================================
+   Base Overlay Container & Theme Variables (Boxy Sharp Design)
+   ========================================================================== */
 .tr-overlay-container {
   position: fixed;
   top: 20px;
   right: 20px;
   z-index: 999999;
   width: 340px;
-  background: rgba(22, 18, 20, 0.92);
+  min-width: 280px;
+  min-height: 240px;
+  max-width: 600px;
+  max-height: 850px;
+  background: rgba(22, 18, 20, 0.96);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 15px rgba(185, 28, 28, 0.15);
-  color: #f3f4f6;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 0; /* Boxy Sharp Edge */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(185, 28, 28, 0.2);
+  color: #fdf8ea;
   font-size: 13px;
   overflow: hidden;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
   user-select: none;
 }
 
-.tr-overlay-container.collapsed .tr-overlay-body {
-  display: none;
+.tr-overlay-container.collapsed {
+  min-height: 0;
+  height: auto !important;
 }
 
+.tr-overlay-container.collapsed .tr-overlay-body,
+.tr-overlay-container.collapsed .tr-rh {
+  display: none !important;
+}
+
+/* Windows-style 8-Direction Border & Corner Resize Handles */
+.tr-rh {
+  position: absolute;
+  z-index: 99;
+}
+.tr-rh-n  { top: 0; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.tr-rh-s  { bottom: 0; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.tr-rh-e  { top: 8px; bottom: 8px; right: 0; width: 6px; cursor: ew-resize; }
+.tr-rh-w  { top: 8px; bottom: 8px; left: 0; width: 6px; cursor: ew-resize; }
+.tr-rh-ne { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.tr-rh-nw { top: 0; left: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+.tr-rh-se { bottom: 0; right: 0; width: 10px; height: 10px; cursor: se-resize; }
+.tr-rh-sw { bottom: 0; left: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+
+/* Boxy Header Bar */
 .tr-overlay-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(158, 27, 36, 0.8), rgba(22, 18, 20, 0.95));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(158, 27, 36, 0.95), rgba(22, 18, 20, 0.98));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
   cursor: move;
+  flex-shrink: 0;
 }
 
 .tr-overlay-title {
@@ -60,28 +92,41 @@
   font-size: 10px;
   font-weight: 800;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 0;
   text-transform: uppercase;
+}
+
+.tr-user-link {
+  color: #f87171;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.tr-user-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .tr-overlay-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tr-icon-btn {
   background: rgba(255, 255, 255, 0.08);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #d1d5db;
-  width: 22px;
   height: 22px;
-  border-radius: 4px;
+  padding: 0 6px;
+  border-radius: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 10px;
+  font-weight: 700;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -94,26 +139,21 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-height: 520px;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
-/* Custom Scrollbar */
-.tr-overlay-body::-webkit-scrollbar {
-  width: 4px;
-}
-.tr-overlay-body::-webkit-scrollbar-thumb {
-  background: rgba(239, 68, 68, 0.3);
-  border-radius: 4px;
-}
-
-/* Section Card */
+/* ==========================================================================
+   Dark Theme Cards & Components (Boxy Sharp Boundaries)
+   ========================================================================== */
 .tr-card {
-  background: rgba(30, 26, 28, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
+  background: rgba(36, 30, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
   padding: 10px;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .tr-card-title {
@@ -128,10 +168,119 @@
   justify-content: space-between;
 }
 
-/* Quote Recognition Banner */
+/* Custom Boxy Scrollbars - Dark Mode */
+.tr-overlay-body::-webkit-scrollbar,
+.tr-races-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tr-overlay-body::-webkit-scrollbar-track,
+.tr-races-list::-webkit-scrollbar-track {
+  background: #241e20;
+  border-radius: 0;
+}
+
+.tr-overlay-body::-webkit-scrollbar-thumb,
+.tr-races-list::-webkit-scrollbar-thumb {
+  background: #382a2c;
+  border-radius: 0;
+}
+
+.tr-overlay-body::-webkit-scrollbar-thumb:hover,
+.tr-races-list::-webkit-scrollbar-thumb:hover {
+  background: #c52228;
+}
+
+/* ==========================================================================
+   Light Theme (Sunny Cream Mode - Boxy Design)
+   ========================================================================== */
+.tr-overlay-container.light {
+  background: rgba(253, 248, 234, 0.98);
+  border-color: #800000;
+  color: #222222;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 15px rgba(128, 0, 0, 0.08);
+}
+
+.tr-overlay-container.light .tr-overlay-header {
+  background: linear-gradient(135deg, #800000, #420c0e);
+  border-bottom-color: rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+}
+
+.tr-overlay-container.light .tr-user-link {
+  color: #fca5a5;
+}
+
+.tr-overlay-container.light .tr-user-link:hover {
+  color: #ffffff;
+}
+
+.tr-overlay-container.light .tr-card {
+  background: #ffffff;
+  border-color: #e8d8bc;
+  color: #222222;
+}
+
+.tr-overlay-container.light .tr-card-title {
+  color: #7c6f5a;
+}
+
+.tr-overlay-container.light .tr-race-item {
+  background: rgba(0, 0, 0, 0.025);
+  border-color: #e8d8bc;
+  color: #222222;
+}
+
+.tr-overlay-container.light .tr-race-item:hover {
+  background: rgba(128, 0, 0, 0.08);
+  border-color: #800000;
+}
+
+.tr-overlay-container.light .tr-race-wpm {
+  color: #800000;
+}
+
+.tr-overlay-container.light .tr-tid-link {
+  color: #d97706;
+}
+
+.tr-overlay-container.light .tr-race-link {
+  color: #a71d22;
+}
+
+.tr-overlay-container.light .tr-streak-msg {
+  color: #382a2c;
+}
+
+.tr-overlay-container.light .tr-progress-bg {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.tr-overlay-container.light .tr-setting-row {
+  color: #382a2c;
+}
+
+.tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-track,
+.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-track {
+  background: #f5edd8;
+}
+
+.tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-thumb,
+.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-thumb {
+  background: #9e8d76;
+}
+
+.tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-thumb:hover,
+.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-thumb:hover {
+  background: #800000;
+}
+
+/* ==========================================================================
+   Shared Widget Components (Boxy Sharp Edges)
+   ========================================================================== */
 .tr-quote-banner {
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
@@ -141,13 +290,13 @@
 .tr-quote-banner.new-text {
   background: rgba(59, 130, 246, 0.15);
   border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
+  color: #3b82f6;
 }
 
 .tr-quote-banner.repeat-text {
   background: rgba(234, 179, 8, 0.15);
   border: 1px solid rgba(234, 179, 8, 0.3);
-  color: #facc15;
+  color: #ca8a04;
 }
 
 .tr-quote-stats {
@@ -155,17 +304,15 @@
   gap: 10px;
   margin-top: 4px;
   font-size: 11px;
-  color: #e5e7eb;
 }
 
-/* Delta Comparison Pill */
 .tr-delta-pill {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 6px;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   font-weight: 600;
   font-size: 12px;
   animation: slideInDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -174,16 +321,15 @@
 .tr-delta-pill.gain {
   background: rgba(34, 197, 94, 0.2);
   border: 1px solid rgba(34, 197, 94, 0.4);
-  color: #4ade80;
+  color: #22c55e;
 }
 
 .tr-delta-pill.loss {
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #f87171;
+  color: #ef4444;
 }
 
-/* Streak Progress */
 .tr-streak-header {
   display: flex;
   justify-content: space-between;
@@ -193,31 +339,36 @@
 
 .tr-streak-val {
   font-weight: 700;
-  color: #f87171;
+  color: #ef4444;
+}
+
+.tr-streak-val.complete {
+  color: #22c55e;
 }
 
 .tr-progress-bg {
   width: 100%;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: 0;
   overflow: hidden;
   margin-bottom: 6px;
 }
 
 .tr-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ef4444, #f97316);
-  border-radius: 4px;
+  background: linear-gradient(90deg, #ef4444, #c52228);
+  border-radius: 0;
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tr-progress-fill.complete {
+  background: linear-gradient(90deg, #22c55e, #10b981);
 }
 
 .tr-streak-msg {
   font-size: 11px;
-  color: #d1d5db;
 }
 
-/* QOTD & Countdown */
 .tr-status-row {
   display: flex;
   justify-content: space-between;
@@ -228,7 +379,7 @@
 
 .tr-badge {
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -236,80 +387,87 @@
 
 .tr-badge.done {
   background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
+  color: #22c55e;
 }
 
 .tr-badge.pending {
   background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  color: #ef4444;
 }
 
 .tr-timer {
   font-family: monospace;
   font-size: 12px;
   font-weight: 600;
-  color: #fbbf24;
+  color: #d97706;
 }
 
-/* Last 10 Races List */
+/* Clickable Race History Item Layout (WPM | Text ID Link | Result Link) */
 .tr-races-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 220px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
 .tr-race-item {
   display: grid;
-  grid-template-columns: 24px 1fr 60px 50px;
+  grid-template-columns: 2fr 1fr 1fr;
   align-items: center;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 6px;
+  padding: 6px 10px;
+  border-radius: 0; /* Boxy Sharp Border */
   font-size: 11px;
-  transition: transform 0.25s ease, opacity 0.25s ease, background 0.15s ease;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
 .tr-race-item.new-item {
-  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideInLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tr-race-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.tr-race-num {
-  color: #6b7280;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .tr-race-wpm {
   font-weight: 700;
-  color: #ffffff;
 }
 
-.tr-race-acc {
-  color: #9ca3af;
-  text-align: right;
-}
-
-.tr-race-rank {
-  text-align: right;
-  font-weight: 600;
+.tr-tid-link {
   color: #fbbf24;
+  text-decoration: none;
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 10.5px;
+  text-align: center;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
 }
 
-.tr-race-rank.win {
-  color: #4ade80;
+.tr-tid-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
-/* Sparkline Container */
+.tr-race-link {
+  color: #f87171;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 10.5px;
+  text-align: right;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.tr-race-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
 .tr-sparkline-box {
-  height: 40px;
+  height: 60px;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .tr-sparkline-svg {
@@ -318,13 +476,11 @@
   overflow: visible;
 }
 
-/* Settings Toggle */
 .tr-setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  color: #d1d5db;
   padding: 4px 0;
 }
 
@@ -345,9 +501,9 @@
   position: absolute;
   cursor: pointer;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(128, 128, 128, 0.3);
   transition: .2s;
-  border-radius: 18px;
+  border-radius: 0;
 }
 
 .tr-slider:before {
@@ -359,7 +515,7 @@
   bottom: 2px;
   background-color: white;
   transition: .2s;
-  border-radius: 50%;
+  border-radius: 0;
 }
 
 input:checked + .tr-slider {
@@ -370,14 +526,13 @@ input:checked + .tr-slider:before {
   transform: translateX(14px);
 }
 
-/* Keyframe Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-15px); }
+  from { opacity: 0; transform: translateX(-20px); }
   to { opacity: 1; transform: translateX(0); }
 }
 

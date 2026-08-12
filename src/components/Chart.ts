@@ -1,4 +1,5 @@
 import type { Metric } from "../types";
+import { escapeHtml } from "../types";
 
 export interface ChartProps {
   data: any[];
@@ -181,7 +182,7 @@ export function renderChart(props: ChartProps): HTMLElement {
       <line x1="${x1}" y1="${M.top}" x2="${x1}" y2="${M.top + cH}" stroke="#ef4444" stroke-width="1.5" opacity="0.9" />
       <line x1="${x2}" y1="${M.top}" x2="${x2}" y2="${M.top + cH}" stroke="#ef4444" stroke-width="1.5" opacity="0.9" />
       <rect x="${badgeX}" y="${badgeY}" width="${badgeW}" height="18" rx="3" fill="#742a2a" opacity="0.97" stroke="#c53030" stroke-width="1" />
-      <text x="${badgeX + badgeW / 2}" y="${badgeY + 12}" text-anchor="middle" fill="#fdfbf7" font-size="9" font-family="ui-monospace, monospace">${escSvg(badgeText)}</text>
+      <text x="${badgeX + badgeW / 2}" y="${badgeY + 12}" text-anchor="middle" fill="#fdfbf7" font-size="9" font-family="ui-monospace, monospace">${escapeHtml(badgeText)}</text>
     `;
   };
 
@@ -257,7 +258,7 @@ export function renderChart(props: ChartProps): HTMLElement {
           font-weight="${l.bold ? "bold" : "normal"}"
           font-family="ui-sans-serif, system-ui, sans-serif"
         >
-          ${escSvg(l.text)}
+          ${escapeHtml(l.text)}
         </text>
       `).join("")}
     `;
@@ -385,8 +386,4 @@ export function renderChart(props: ChartProps): HTMLElement {
 
   container.appendChild(svg);
   return container;
-}
-
-function escSvg(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

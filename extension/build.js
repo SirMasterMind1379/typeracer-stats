@@ -1,4 +1,4 @@
-import { build } from 'vite';
+import { build } from 'esbuild';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,80 +8,65 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
 async function buildExtensionAndUserscript() {
-  console.log('🚀 Building TypeRacer Extension & Userscript...');
+  console.log('🚀 Building TypeRacer Extension & Userscript with esbuild...');
 
   const outDirExtension = path.resolve(rootDir, 'dist/extension');
   const outDirUserscript = path.resolve(rootDir, 'dist/userscript');
 
-  // Clean dist directories
   fs.mkdirSync(outDirExtension, { recursive: true });
   fs.mkdirSync(path.join(outDirExtension, 'icons'), { recursive: true });
   fs.mkdirSync(outDirUserscript, { recursive: true });
 
-  // 1. Build Extension Content Script
+  // 1. Bundle Content Script and Background Worker using esbuild
   await build({
-    configFile: false,
-    build: {
-      outDir: outDirExtension,
-      emptyOutDir: false,
-      lib: {
-        entry: path.resolve(__dirname, 'src/content.ts'),
-        name: 'TypeRacerContentScript',
-        formats: ['iife'],
-        fileName: () => 'content.js',
-      },
-      rollupOptions: {
-        output: {
-          inlineDynamicImports: true,
-        },
-      },
+    entryPoints: [
+      path.resolve(__dirname, 'src/content.ts'),
+      path.resolve(__dirname, 'src/background.ts'),
+    ],
+    outdir: outDirExtension,
+    bundle: true,
+    format: 'iife',
+    platform: 'browser',
+    target: 'es2020',
+    loader: {
+      '.css': 'text',
+      '.ts': 'ts',
     },
+    minify: false,
   });
 
-  // 2. Build Extension Background Worker
-  await build({
-    configFile: false,
-    build: {
-      outDir: outDirExtension,
-      emptyOutDir: false,
-      lib: {
-        entry: path.resolve(__dirname, 'src/background.ts'),
-        name: 'TypeRacerBackgroundScript',
-        formats: ['iife'],
-        fileName: () => 'background.js',
-      },
-      rollupOptions: {
-        output: {
-          inlineDynamicImports: true,
-        },
-      },
-    },
-  });
-
-  // 3. Copy Manifest V3
+  // 2. Copy Manifest V3
   fs.copyFileSync(
     path.resolve(__dirname, 'manifest.json'),
     path.resolve(outDirExtension, 'manifest.json')
   );
 
-  // Create dummy icon files if not present
+  // 3. Copy Custom Icon Files (.jpg)
   const iconSizes = [16, 48, 128];
-  const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#dc2626"/><text x="50" y="65" font-size="50" font-weight="bold" fill="#ffffff" text-anchor="middle">TR</text></svg>`;
-  for (const size of iconSizes) {
-    fs.writeFileSync(path.resolve(outDirExtension, `icons/icon${size}.png`), svgIcon);
+  const customIconPath = path.resolve(__dirname, 'icons/icon.jpg');
+  if (fs.existsSync(customIconPath)) {
+    for (const size of iconSizes) {
+      fs.copyFileSync(customIconPath, path.resolve(outDirExtension, `icons/icon${size}.jpg`));
+    }
+  } else {
+    const pngBase64 = 'iVBORw0KGgoAAAANSU5EUgAAABAAAAAQCAYAAAAf8/9hAAAAMklEQVR42mP8z8BQDwAmdAX8//8z/gczw/8w/A+m4eNnGA1DAIZRMAoGAWjA0cQFAgDDAwEAE8hN3wAAAABJRU5ErkJggg==';
+    const pngBuffer = Buffer.from(pngBase64, 'base64');
+    for (const size of iconSizes) {
+      fs.writeFileSync(path.resolve(outDirExtension, `icons/icon${size}.jpg`), pngBuffer);
+    }
   }
 
   // 4. Bundle Userscript (.user.js)
   const headerContent = fs.readFileSync(path.resolve(__dirname, 'userscript-header.js'), 'utf-8');
   const compiledContent = fs.readFileSync(path.resolve(outDirExtension, 'content.js'), 'utf-8');
 
-  const userscriptFinal = `${headerContent.trim()}\n\n(function() {\n'use strict';\n${compiledContent}\n})();\n`;
+  const userscriptFinal = `${headerContent.trim()}\n\n${compiledContent}\n`;
   const userscriptPath = path.resolve(outDirUserscript, 'typeracer-overlay.user.js');
 
   fs.writeFileSync(userscriptPath, userscriptFinal, 'utf-8');
 
   console.log(`✅ Chrome Extension generated at: ${outDirExtension}`);
-  console.log(`✅ Userscript generated at: ${userscriptPath}`);
+  console.log(`✅ Userscript generated at: ${outDirUserscript}`);
 }
 
 buildExtensionAndUserscript().catch((err) => {

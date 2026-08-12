@@ -1,15 +1,4 @@
-function setCookie(name: string, value: string, days = 365) {
-  if (typeof document === "undefined") return;
-  const d = new Date();
-  d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${d.toUTCString()}; path=/; SameSite=Lax`;
-}
-
-function getCookie(name: string): string {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : "";
-}
+import { getCookie, setCookie, escapeHtml } from "../types";
 
 export interface SearchFormProps {
   value: string;
@@ -214,10 +203,6 @@ export function renderSearchForm(props: SearchFormProps): HTMLElement {
 
   update();
   return form;
-}
-
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function eyeSvg() {

@@ -3,6 +3,7 @@ import type { ExtensionRace } from "../types";
 export interface TypeRacerHookEvents {
   onQuoteLoaded: (textId: number, quoteText: string) => void;
   onRaceCompleted: (race: ExtensionRace) => void;
+  onUsernameDetected?: (username: string) => void;
 }
 
 export class TypeRacerHook {
@@ -11,11 +12,35 @@ export class TypeRacerHook {
   private currentQuoteText: string = "";
   private observer: MutationObserver | null = null;
   private isRaceInProgress = false;
+  private detectedUsername = "";
 
   constructor(events: TypeRacerHookEvents) {
     this.events = events;
     this.initNetworkInterceptor();
     this.initDOMObserver();
+  }
+
+  public detectUsername(): string {
+    // 1. Check profile link in header/DOM
+    const profileLinks = document.querySelectorAll("a[href*='/pit/profile?user='], a[href*='/pit/racer?user=']");
+    for (const link of profileLinks) {
+      const href = link.getAttribute("href") || "";
+      const match = href.match(/user=([a-zA-Z0-9_]+)/);
+      if (match && match[1]) return match[1];
+    }
+
+    // 2. Check racer name DOM element
+    const userEl = document.querySelector(".racerProfileLink, .userName, .profileNav .name, .racerName");
+    if (userEl && userEl.textContent) {
+      const name = userEl.textContent.trim();
+      if (name && !name.includes(" ") && name.length >= 2) return name;
+    }
+
+    // 3. Check Cookie
+    const cookieMatch = document.cookie.match(/(?:^|; )tr_username=([^;]*)/);
+    if (cookieMatch && cookieMatch[1]) return decodeURIComponent(cookieMatch[1]);
+
+    return "";
   }
 
   private initNetworkInterceptor(): void {
@@ -72,7 +97,7 @@ export class TypeRacerHook {
       if (item && item.wpm != null && item.rid != null) {
         const race: ExtensionRace = {
           id: String(item.rid),
-          date: item.t || new Date().toISOString(),
+          date: item.t ? (typeof item.t === 'number' ? new Date(item.t * 1000).toISOString() : String(item.t)) : new Date().toISOString(),
           speed: Math.round(Number(item.wpm)),
           accuracy: item.acc != null ? Number((item.acc * (item.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
           points: item.pts != null ? Number(item.pts) : null,
@@ -90,6 +115,15 @@ export class TypeRacerHook {
 
   private initDOMObserver(): void {
     const checkDOM = () => {
+      // 0. Check Username
+      const user = this.detectUsername();
+      if (user && user !== this.detectedUsername) {
+        this.detectedUsername = user;
+        if (this.events.onUsernameDetected) {
+          this.events.onUsernameDetected(user);
+        }
+      }
+
       // 1. Detect quote text in game box
       const textContainer = document.querySelector(".gameView .textPane, .gameView .unhandled, .gameView [data-qa='quote']");
       if (textContainer && textContainer.textContent) {
@@ -106,7 +140,6 @@ export class TypeRacerHook {
             if (match) tid = parseInt(match[1], 10);
           }
           if (!tid) {
-            // Simple deterministic string hash for quote identification
             tid = this.hashString(fullText);
           }
           this.currentTextId = tid;
@@ -114,10 +147,9 @@ export class TypeRacerHook {
         }
       }
 
-      // 2. Detect race end popup/summary if network intercept didn't trigger
+      // 2. Detect race end summary if network intercept didn't trigger
       const rankPanel = document.querySelector(".rankPanel, .popup .wpmScore, .gameView .rank");
       if (rankPanel && this.isRaceInProgress) {
-        const wpmEl = document.querySelector(".wpmScore, .rankPanel .wpm, .popup span:contains('wpm')");
         const wpmMatch = document.body.innerText.match(/(\d+)\s*wpm/i);
         const accMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*%\s*accuracy/i);
 
@@ -147,7 +179,7 @@ export class TypeRacerHook {
     this.observer = new MutationObserver(() => checkDOM());
     this.observer.observe(document.body, { childList: true, subtree: true });
     
-    // Also run immediate check
+    // Immediate check
     checkDOM();
   }
 

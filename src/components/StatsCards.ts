@@ -12,7 +12,7 @@ export function renderStatsCards(data: UserData): HTMLElement {
   const items: { label: string; value: string }[] = [
     {
       label: hasApi ? "Races" : "Total Races",
-      value: (s.totalRaces ?? data.races.length ?? 0).toLocaleString(),
+      value: s.totalRaces > 0 ? s.totalRaces.toLocaleString() : "—",
     },
   ];
 
@@ -37,8 +37,8 @@ export function renderStatsCards(data: UserData): HTMLElement {
     .map(
       (item) => `
     <div class="p-3 bg-beige-100 dark:bg-beige-900 border border-beige-300 dark:border-beige-700">
-      <p class="text-xs text-beige-700 dark:text-beige-400">${item.label}</p>
-      <p class="text-lg font-bold text-beige-900 dark:text-beige-100">${item.value}</p>
+      <p class="text-[10px] uppercase tracking-wider font-sans font-semibold text-beige-700 dark:text-beige-400">${item.label}</p>
+      <p class="text-lg font-bold font-mono text-beige-900 dark:text-beige-100 mt-0.5">${item.value}</p>
     </div>
   `
     )

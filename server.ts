@@ -30,17 +30,38 @@ async function scrapeProfile(username: string) {
 
     const stats: any = { totalRaces: 0, avgWpm: null, bestWpm: null, typistLevel: null };
 
-    const avgMatch = html.match(/Stat__Top">([\d.]+)\s*WPM<\/span>(?:(?!Stat__Top)[\s\S])*?Stat__Btm">Full Avg\./i);
-    if (avgMatch) stats.avgWpm = parseFloat(avgMatch[1]);
+    // Strategy: find each Stat__Top value paired with its Stat__Btm label.
+    // TypeRacer's HTML has a malformed closing tag on the Races stat (<span> instead of </span>)
+    // so we use a two-pass approach: collect all stat pairs then match by label.
+    const statPairs: { value: string; label: string }[] = [];
+    const statBlockRe = /Stat__Top">([\s\S]*?)<\/span>[\s\S]*?Stat__Btm">([\s\S]*?)<(?:\/span|span)/gi;
+    let m;
+    while ((m = statBlockRe.exec(html)) !== null) {
+      statPairs.push({ value: m[1].trim(), label: m[2].trim() });
+    }
 
-    const bestMatch = html.match(/Stat__Top">([\d.]+)\s*WPM<\/span>(?:(?!Stat__Top)[\s\S])*?Stat__Btm">Best Race/i);
-    if (bestMatch) stats.bestWpm = parseFloat(bestMatch[1]);
+    for (const { value, label } of statPairs) {
+      const lbl = label.toLowerCase();
+      if (lbl.includes('full avg')) {
+        const wpm = value.match(/([\d.]+)/);
+        if (wpm) stats.avgWpm = parseFloat(wpm[1]);
+      } else if (lbl.includes('best race')) {
+        const wpm = value.match(/([\d.]+)/);
+        if (wpm) stats.bestWpm = parseFloat(wpm[1]);
+      } else if (lbl === 'races') {
+        stats.totalRaces = parseInt(value.replace(/,/g, ''), 10) || 0;
+      } else if (lbl.includes('exp level')) {
+        stats.typistLevel = value.replace(/\s+/g, ' ').trim() || null;
+      }
+    }
 
-    const racesMatch = html.match(/Stat__Top">(\d+)<\/span>(?:(?!Stat__Top)[\s\S])*?Stat__Btm">Races/i);
-    if (racesMatch) stats.totalRaces = parseInt(racesMatch[1]);
-
-    const typistMatch = html.match(/Stat__Top">([^<]+)<\/span>(?:(?!Stat__Top)[\s\S])*?Stat__Btm">Exp Level/i);
-    if (typistMatch) stats.typistLevel = typistMatch[1].trim();
+    // Scrape "Racing Since" date from About block for joinedAt
+    let joinedAt: string | null = null;
+    const joinMatch = html.match(/Racing Since:[\s\S]*?<span>([^<]+)<\/span>/);
+    if (joinMatch) {
+      const d = new Date(joinMatch[1].trim());
+      if (!isNaN(d.getTime())) joinedAt = d.toISOString();
+    }
 
     const nameMatch = html.match(/<title>([^(<]+)\s*\(/);
     const name = nameMatch ? nameMatch[1].trim() : username;
@@ -48,7 +69,7 @@ async function scrapeProfile(username: string) {
     const premium = html.includes('Plan__Premium') && !html.includes('Plan__Basic');
     const badges = [...new Set([...html.matchAll(/data-badge="([^"]+)"/g)].map((m) => m[1]))];
 
-    return { name, stats, premium, badges };
+    return { name, stats, premium, badges, joinedAt };
   } catch {
     return null;
   }
@@ -166,7 +187,7 @@ Bun.serve({
           return Response.json({
             username,
             name: profile.name,
-            joinedAt: null,
+            joinedAt: profile.joinedAt ?? null,
             premium: profile.premium,
             badges: profile.badges,
             stats: profile.stats,
@@ -187,14 +208,14 @@ Bun.serve({
           if (apiKey || apiUsername) {
             return Response.json({ error: 'Invalid API key. Please check your credentials.' }, { status: 401 });
           }
-          const profile = await scrapeProfile(username);
+          const profile = scrapeData || (await scrapeProfile(username));
           if (!profile) {
             return Response.json({ error: 'User not found. Please check the username.' }, { status: 404 });
           }
           return Response.json({
             username,
             name: profile.name,
-            joinedAt: null,
+            joinedAt: profile.joinedAt ?? null,
             premium: profile.premium,
             badges: profile.badges,
             stats: profile.stats,

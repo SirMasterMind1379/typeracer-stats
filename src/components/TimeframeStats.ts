@@ -18,8 +18,8 @@ export function renderTimeframeStats(stats: TStats | null): HTMLElement {
     .map(
       (item) => `
     <div class="flex flex-col">
-      <span class="text-beige-700 dark:text-beige-400 uppercase tracking-wider text-[10px]">${item.label}</span>
-      <span class="font-semibold text-sm text-beige-900 dark:text-beige-100">${item.value}</span>
+      <span class="text-beige-700 dark:text-beige-400 font-sans uppercase tracking-wider text-[10px] font-semibold">${item.label}</span>
+      <span class="font-semibold font-mono text-sm text-beige-900 dark:text-beige-100 mt-0.5">${item.value}</span>
     </div>
   `
     )

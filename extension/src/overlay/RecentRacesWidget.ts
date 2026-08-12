@@ -87,17 +87,19 @@ export class RecentRacesWidget {
       `;
     }).join("");
 
-    // Build List Items (WPM | Clickable Text ID Link | Clickable Result Link)
+    // Build List Items (Clean format, no emojis, valid Text ID link or span)
     const listHtml = recent10.map((r, index) => {
       const isNew = index === 0 && highlightNew;
       const raceUrl = this.buildTypeRacerResultUrl(r, username);
-      const textIdText = r.textId ? `#${r.textId}` : "#--";
-      const textInfoUrl = r.textId ? `https://data.typeracer.com/pit/text_info?id=${r.textId}` : "javascript:void(0)";
+
+      const tidHtml = r.textId && r.textId > 0
+        ? `<a href="https://data.typeracer.com/pit/text_info?id=${r.textId}" target="_blank" rel="noopener" class="tr-tid-link" title="View quote text info on TypeRacer">#${r.textId}</a>`
+        : `<span class="tr-tid-muted">#--</span>`;
 
       return `
         <div class="tr-race-item ${isNew ? 'new-item' : ''}">
-          <span class="tr-race-wpm">⚡ ${r.speed} WPM <span style="font-size: 10px; opacity: 0.65; font-weight: 500;">(${r.accuracy.toFixed(1)}%)</span></span>
-          <a href="${textInfoUrl}" target="_blank" rel="noopener" class="tr-tid-link" title="View quote text info on TypeRacer">${textIdText}</a>
+          <span class="tr-race-wpm">${r.speed} WPM <span style="font-size: 10px; opacity: 0.65; font-weight: 500;">(${r.accuracy.toFixed(1)}%)</span></span>
+          ${tidHtml}
           <a href="${raceUrl}" target="_blank" rel="noopener" class="tr-race-link" title="View pit result details">Result ↗</a>
         </div>
       `;

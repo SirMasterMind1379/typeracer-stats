@@ -450,6 +450,14 @@
   text-decoration: underline;
 }
 
+.tr-tid-muted {
+  color: #6b7280;
+  opacity: 0.6;
+  font-size: 10px;
+  font-family: monospace;
+  text-align: center;
+}
+
 .tr-race-link {
   color: #f87171;
   text-decoration: none;

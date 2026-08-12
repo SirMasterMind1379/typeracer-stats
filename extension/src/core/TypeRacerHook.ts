@@ -13,6 +13,8 @@ export class TypeRacerHook {
   private observer: MutationObserver | null = null;
   private isRaceInProgress = false;
   private detectedUsername = "";
+  private lastHandledRaceId = "";
+  private lastHandledRaceTime = 0;
 
   constructor(events: TypeRacerHookEvents) {
     this.events = events;
@@ -56,7 +58,7 @@ export class TypeRacerHook {
           this.handleApiResponse(json);
         }
       } catch {
-        // ignore JSON parse errors on non-json requests
+        // ignore
       }
       return response;
     };
@@ -95,14 +97,18 @@ export class TypeRacerHook {
     const raceList = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [data];
     for (const item of raceList) {
       if (item && item.wpm != null && item.rid != null) {
+        const raceId = String(item.rid);
+        if (this.lastHandledRaceId === raceId) continue;
+        this.lastHandledRaceId = raceId;
+
         const race: ExtensionRace = {
-          id: String(item.rid),
+          id: raceId,
           date: item.t ? (typeof item.t === 'number' ? new Date(item.t * 1000).toISOString() : String(item.t)) : new Date().toISOString(),
           speed: Math.round(Number(item.wpm)),
           accuracy: item.acc != null ? Number((item.acc * (item.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
           points: item.pts != null ? Number(item.pts) : null,
           rank: item.r || 1,
-          totalRacers: item.nr || 1,
+          totalRacers: item.nr || 5,
           textId: item.tid || this.currentTextId || 0,
           won: item.r === 1,
           mode: item.gn || item.mode || "multiplayer",
@@ -124,7 +130,7 @@ export class TypeRacerHook {
         }
       }
 
-      // 1. Detect quote text in game box
+      // 1. Detect quote text & exact textId in game box
       const textContainer = document.querySelector(".gameView .textPane, .gameView .unhandled, .gameView [data-qa='quote']");
       if (textContainer && textContainer.textContent) {
         const fullText = textContainer.textContent.trim();
@@ -132,12 +138,16 @@ export class TypeRacerHook {
           this.currentQuoteText = fullText;
           this.isRaceInProgress = true;
 
-          // Attempt to locate textId from info links if available
+          // Search DOM for exact text_info link
           let tid = 0;
-          const infoLink = document.querySelector("a[href*='text_info?id=']");
-          if (infoLink) {
-            const match = infoLink.getAttribute("href")?.match(/id=(\d+)/);
-            if (match) tid = parseInt(match[1], 10);
+          const infoLinks = document.querySelectorAll("a[href*='text_info?id=']");
+          for (const link of infoLinks) {
+            const href = link.getAttribute("href") || "";
+            const match = href.match(/id=(\d+)/);
+            if (match && match[1]) {
+              tid = parseInt(match[1], 10);
+              break;
+            }
           }
           if (!tid) {
             tid = this.hashString(fullText);
@@ -147,31 +157,67 @@ export class TypeRacerHook {
         }
       }
 
-      // 2. Detect race end summary if network intercept didn't trigger
-      const rankPanel = document.querySelector(".rankPanel, .popup .wpmScore, .gameView .rank");
-      if (rankPanel && this.isRaceInProgress) {
-        const wpmMatch = document.body.innerText.match(/(\d+)\s*wpm/i);
-        const accMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*%\s*accuracy/i);
+      // 2. Detect Text ID if link loads after initial render
+      if (this.currentTextId === 0 || this.currentTextId > 100000000) {
+        const infoLinks = document.querySelectorAll("a[href*='text_info?id=']");
+        for (const link of infoLinks) {
+          const href = link.getAttribute("href") || "";
+          const match = href.match(/id=(\d+)/);
+          if (match && match[1]) {
+            const realTid = parseInt(match[1], 10);
+            if (realTid > 0 && realTid !== this.currentTextId) {
+              this.currentTextId = realTid;
+              this.events.onQuoteLoaded(realTid, this.currentQuoteText);
+              break;
+            }
+          }
+        }
+      }
 
-        if (wpmMatch) {
-          const wpm = parseInt(wpmMatch[1], 10);
-          const acc = accMatch ? parseFloat(accMatch[1]) : 100;
-          this.isRaceInProgress = false;
+      // 3. Detect Race Completion Link or Rank Panel in DOM
+      const resultLink = document.querySelector("a[href*='/pit/result?id=']");
+      const rankPanel = document.querySelector(".rankPanel, .tblScore, .popup .wpmScore, .gameView .rank");
 
-          const race: ExtensionRace = {
-            id: "race_" + Date.now(),
-            date: new Date().toISOString(),
-            speed: wpm,
-            accuracy: acc,
-            points: null,
-            rank: 1,
-            totalRacers: 1,
-            textId: this.currentTextId,
-            won: true,
-            mode: "multiplayer",
-            quoteText: this.currentQuoteText,
-          };
-          this.events.onRaceCompleted(race);
+      if ((resultLink || rankPanel) && (this.isRaceInProgress || Date.now() - this.lastHandledRaceTime > 5000)) {
+        let raceId = "";
+        if (resultLink) {
+          const href = resultLink.getAttribute("href") || "";
+          const match = href.match(/id=([^&]+)/);
+          if (match) raceId = match[1];
+        }
+
+        if (!raceId) {
+          raceId = `race_${Date.now()}`;
+        }
+
+        if (this.lastHandledRaceId !== raceId) {
+          const wpmMatch = document.body.innerText.match(/(\d+)\s*wpm/i);
+          const accMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*%\s*accuracy/i);
+
+          if (wpmMatch) {
+            const wpm = parseInt(wpmMatch[1], 10);
+            const acc = accMatch ? parseFloat(accMatch[1]) : 100;
+
+            this.isRaceInProgress = false;
+            this.lastHandledRaceId = raceId;
+            this.lastHandledRaceTime = Date.now();
+
+            const race: ExtensionRace = {
+              id: raceId,
+              date: new Date().toISOString(),
+              speed: wpm,
+              accuracy: acc,
+              points: null,
+              rank: 1,
+              totalRacers: 5,
+              textId: this.currentTextId,
+              won: true,
+              mode: "multiplayer",
+              quoteText: this.currentQuoteText,
+            };
+
+            this.events.onRaceCompleted(race);
+          }
         }
       }
     };

@@ -41,6 +41,12 @@ The helper `formatDisplayDate()` in `src/types.ts` implements this. Use it where
 - **In-Place Structural Skeleton Loading**: When `loading === true`, the application MUST render structural skeleton placeholders in the exact visual layout positions of all dashboard components (Profile, Stats Cards, Controls, Chart, Heatmap, Race Table, Mode Breakdown, Pokédex Grid). Do NOT append generic loader boxes at the bottom.
 - **Component UI State Preservation Across Theme Toggles**: Component local state (such as `TextCollectorState` with `isPokedexView` and `selectedQuoteId`) MUST be persisted across `render()` calls so theme switches do NOT reset active views or close open detail drawers.
 
+## Extension & Manifest V3 Engineering Rules
+- **Icon Binary Header Alignment**: Icon declarations in `manifest.json` MUST match the exact binary format of the underlying image asset (`.jpg` for JPEG binaries).
+- **CORS Delegation via Service Worker**: Content scripts running in page context MUST delegate cross-origin network requests (`data.typeracer.com`) to `background.js` via `chrome.runtime.sendMessage()`.
+- **Uncapped Streak Data Querying**: Streak calculation helper functions MUST query up to 200 recent items before filtering competitive races to ensure accurate daily totals without artificial capping.
+
 ## Testing & Privacy Constraints
 - **Browser Subagent QA**: Automatically run the `browser` subagent to test local applications (`http://localhost:1384`) after major iterations.
 - **Credential Privacy**: NEVER write down or commit user API keys, passwords, or private tokens into persistent documentation or codebase files. Keep secrets strictly transient in chat memory.
+

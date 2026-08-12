@@ -49,14 +49,10 @@ async function buildExtensionAndUserscript() {
   const iconSizes = [16, 48, 128];
   const customIconPath = path.resolve(__dirname, 'icons/icon.jpg');
   if (fs.existsSync(customIconPath)) {
+    fs.copyFileSync(customIconPath, path.resolve(outDirExtension, 'icons/icon.jpg'));
+    fs.copyFileSync(customIconPath, path.resolve(outDirExtension, 'icon.jpg'));
     for (const size of iconSizes) {
       fs.copyFileSync(customIconPath, path.resolve(outDirExtension, `icons/icon${size}.jpg`));
-    }
-  } else {
-    const pngBase64 = 'iVBORw0KGgoAAAANSU5EUgAAABAAAAAQCAYAAAAf8/9hAAAAMklEQVR42mP8z8BQDwAmdAX8//8z/gczw/8w/A+m4eNnGA1DAIZRMAoGAWjA0cQFAgDDAwEAE8hN3wAAAABJRU5ErkJggg==';
-    const pngBuffer = Buffer.from(pngBase64, 'base64');
-    for (const size of iconSizes) {
-      fs.writeFileSync(path.resolve(outDirExtension, `icons/icon${size}.jpg`), pngBuffer);
     }
   }
 

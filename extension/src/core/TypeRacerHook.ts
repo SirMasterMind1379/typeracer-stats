@@ -2,6 +2,7 @@ import type { ExtensionRace } from "../types";
 
 export interface TypeRacerHookEvents {
   onQuoteLoaded: (textId: number, quoteText: string) => void;
+  onRaceStarted?: () => void;
   onRaceCompleted: (race: ExtensionRace) => void;
   onUsernameDetected?: (username: string) => void;
 }
@@ -20,6 +21,7 @@ export class TypeRacerHook {
     this.events = events;
     this.initNetworkInterceptor();
     this.initDOMObserver();
+    this.initClickListeners();
   }
 
   public detectUsername(): string {
@@ -32,7 +34,7 @@ export class TypeRacerHook {
     }
 
     // 2. Check racer name DOM element
-    const userEl = document.querySelector(".racerProfileLink, .userName, .profileNav .name, .racerName");
+    const userEl = document.querySelector(".racerProfileLink, .userName, .profileNav .name, .racerName, span[class*='userName']");
     if (userEl && userEl.textContent) {
       const name = userEl.textContent.trim();
       if (name && !name.includes(" ") && name.length >= 2) return name;
@@ -43,6 +45,35 @@ export class TypeRacerHook {
     if (cookieMatch && cookieMatch[1]) return decodeURIComponent(cookieMatch[1]);
 
     return "";
+  }
+
+  private initClickListeners(): void {
+    // Listen for user clicks on "Race Again", "Enter a typing race", "Practice", etc.
+    document.addEventListener("click", (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const btn = target.closest("button, a, div[role='button'], .gwt-Anchor");
+      if (btn && btn.textContent) {
+        const text = btn.textContent.trim().toLowerCase();
+        if (
+          text.includes("race again") ||
+          text.includes("enter a typing race") ||
+          text.includes("race your friends") ||
+          text.includes("practice") ||
+          text.includes("join race")
+        ) {
+          this.handleRaceStartCue();
+        }
+      }
+    }, true);
+  }
+
+  private handleRaceStartCue(): void {
+    this.isRaceInProgress = true;
+    if (this.events.onRaceStarted) {
+      this.events.onRaceStarted();
+    }
   }
 
   private initNetworkInterceptor(): void {
@@ -100,6 +131,8 @@ export class TypeRacerHook {
         const raceId = String(item.rid);
         if (this.lastHandledRaceId === raceId) continue;
         this.lastHandledRaceId = raceId;
+        this.lastHandledRaceTime = Date.now();
+        this.isRaceInProgress = false;
 
         const race: ExtensionRace = {
           id: raceId,
@@ -130,8 +163,15 @@ export class TypeRacerHook {
         }
       }
 
-      // 1. Detect quote text & exact textId in game box
-      const textContainer = document.querySelector(".gameView .textPane, .gameView .unhandled, .gameView [data-qa='quote']");
+      // 1. Detect active typing input or countdown (Race Start Cue)
+      const activeInput = document.querySelector("input.txtInput:not([disabled]), textarea.txtInput:not([disabled]), input[data-qa='game-input']:not([disabled]), .gameView input:not([disabled])");
+      const countdownBox = document.querySelector(".countdownPopup, .popupContent, [class*='countdown']");
+      if ((activeInput || countdownBox) && !this.isRaceInProgress) {
+        this.handleRaceStartCue();
+      }
+
+      // 2. Detect quote text & exact textId in game box
+      const textContainer = document.querySelector(".gameView .textPane, .gameView .unhandled, .gameView [data-qa='quote'], [class*='textPane'], [class*='unhandled']");
       if (textContainer && textContainer.textContent) {
         const fullText = textContainer.textContent.trim();
         if (fullText && fullText !== this.currentQuoteText) {
@@ -157,7 +197,7 @@ export class TypeRacerHook {
         }
       }
 
-      // 2. Detect Text ID if link loads after initial render
+      // 3. Detect Text ID if link loads after initial render
       if (this.currentTextId === 0 || this.currentTextId > 100000000) {
         const infoLinks = document.querySelectorAll("a[href*='text_info?id=']");
         for (const link of infoLinks) {
@@ -174,11 +214,22 @@ export class TypeRacerHook {
         }
       }
 
-      // 3. Detect Race Completion Link or Rank Panel in DOM
-      const resultLink = document.querySelector("a[href*='/pit/result?id=']");
-      const rankPanel = document.querySelector(".rankPanel, .tblScore, .popup .wpmScore, .gameView .rank");
+      // 4. Detect Race Completion (Race Again button, Pit Result link, or Rank Panel)
+      let raceAgainBtn: HTMLElement | null = null;
+      const allButtons = document.querySelectorAll("button, a.raceAgainLink, a[class*='raceAgain'], .raceAgainLink");
+      for (const btn of allButtons) {
+        if (btn.textContent && btn.textContent.toLowerCase().includes("race again")) {
+          raceAgainBtn = btn as HTMLElement;
+          break;
+        }
+      }
 
-      if ((resultLink || rankPanel) && (this.isRaceInProgress || Date.now() - this.lastHandledRaceTime > 5000)) {
+      const resultLink = document.querySelector("a[href*='/pit/result?id='], a[href*='result?id=']");
+      const rankPanel = document.querySelector(".rankPanel, .tblScore, .popup .wpmScore, .gameView .rank, [data-qa='race-results']");
+
+      const isFinished = raceAgainBtn != null || resultLink != null || rankPanel != null;
+
+      if (isFinished && (this.isRaceInProgress || Date.now() - this.lastHandledRaceTime > 4000)) {
         let raceId = "";
         if (resultLink) {
           const href = resultLink.getAttribute("href") || "";
@@ -191,6 +242,7 @@ export class TypeRacerHook {
         }
 
         if (this.lastHandledRaceId !== raceId) {
+          // Extract WPM & Accuracy
           const wpmMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*wpm/i);
           const accMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*%\s*accuracy/i);
 

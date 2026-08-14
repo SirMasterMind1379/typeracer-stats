@@ -73,6 +73,7 @@ class TypeRacerOverlayApp {
     // 6. Attach TypeRacer Hook for DOM / Network Intercepts & Username Detection
     this.trHook = new TypeRacerHook({
       onQuoteLoaded: (textId, quoteText) => this.handleQuoteLoaded(textId, quoteText),
+      onRaceStarted: () => this.handleRaceStarted(),
       onRaceCompleted: (race) => this.handleRaceCompleted(race),
       onUsernameDetected: (user) => this.handleUsernameChanged(user),
     });
@@ -205,6 +206,13 @@ class TypeRacerOverlayApp {
     }, 1000);
   }
 
+  private handleRaceStarted(): void {
+    // Auto-minimize during race if enabled
+    if (this.ui.isAutoMinimizeEnabled()) {
+      this.ui.setCollapsed(true);
+    }
+  }
+
   private async handleQuoteLoaded(textId: number, quoteText: string): Promise<void> {
     // Auto-minimize during race if enabled
     if (this.ui.isAutoMinimizeEnabled()) {
@@ -244,7 +252,7 @@ class TypeRacerOverlayApp {
         this.quoteStore.syncFromAPI(this.activeUsername).then(() => {
           this.refreshOverlayData();
         });
-      }, 1200);
+      }, 800);
     }
   }
 }

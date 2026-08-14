@@ -84,6 +84,7 @@
   font-size: 13px;
   letter-spacing: 0.3px;
   color: #ffffff;
+  pointer-events: none;
 }
 
 .tr-overlay-title .tr-logo-badge {
@@ -96,16 +97,9 @@
   text-transform: uppercase;
 }
 
-.tr-user-link {
+.tr-user-name {
   color: #f87171;
-  text-decoration: none;
   font-weight: 700;
-  transition: color 0.15s ease, text-decoration 0.15s ease;
-}
-
-.tr-user-link:hover {
-  color: #ffffff;
-  text-decoration: underline;
 }
 
 .tr-overlay-actions {
@@ -217,12 +211,8 @@
   color: #ffffff;
 }
 
-.tr-overlay-container.light .tr-user-link {
+.tr-overlay-container.light .tr-user-name {
   color: #fca5a5;
-}
-
-.tr-overlay-container.light .tr-user-link:hover {
-  color: #ffffff;
 }
 
 .tr-overlay-container.light .tr-card {

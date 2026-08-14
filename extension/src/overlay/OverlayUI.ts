@@ -98,7 +98,7 @@ export class OverlayUI {
     const titleContainer = this.shadowRoot.querySelector("#tr-header-title-container");
     if (titleContainer) {
       if (username) {
-        titleContainer.innerHTML = `<a href="https://data.typeracer.com/pit/profile?user=${encodeURIComponent(username)}" target="_blank" rel="noopener" class="tr-user-link">@${username}</a>`;
+        titleContainer.innerHTML = `<span class="tr-user-name">@${username}</span>`;
       } else {
         titleContainer.textContent = "TypeRacer Stats";
       }
@@ -160,7 +160,7 @@ export class OverlayUI {
     }
 
     const initialTitleHtml = this.settings.username
-      ? `<a href="https://data.typeracer.com/pit/profile?user=${encodeURIComponent(this.settings.username)}" target="_blank" rel="noopener" class="tr-user-link">@${this.settings.username}</a>`
+      ? `<span class="tr-user-name">@${this.settings.username}</span>`
       : "TypeRacer Stats";
 
     const currentModeText = (this.settings.themeMode || "auto").toUpperCase();
@@ -365,7 +365,7 @@ export class OverlayUI {
 
     header.addEventListener("mousedown", (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === "BUTTON" || target.tagName === "A" || target.closest("a") || target.closest("button") || target.classList.contains("tr-rh")) {
+      if (target.tagName === "BUTTON" || target.closest("button") || target.classList.contains("tr-rh")) {
         return;
       }
       isDragging = true;

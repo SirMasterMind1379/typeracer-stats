@@ -163,10 +163,10 @@ class TypeRacerOverlayApp {
         /* Disable racer stats hover popups during race to avoid blocking text */
         .tr-suppress-racer-popups .cursor-help,
         .tr-suppress-racer-popups [class*="cursor-help"],
-        .tr-suppress-racer-popups .gwt-PopupPanel,
-        .tr-suppress-racer-popups div[class*="popup"],
-        .tr-suppress-racer-popups div[class*="tooltip"],
-        .tr-suppress-racer-popups div[class*="Tooltip"] {
+        .tr-suppress-racer-popups .gwt-PopupPanel:not([class*="theme"]):not([class*="Theme"]),
+        .tr-suppress-racer-popups div[class*="popup"]:not([class*="theme"]):not([class*="Theme"]),
+        .tr-suppress-racer-popups div[class*="tooltip"]:not([class*="theme"]):not([class*="Theme"]),
+        .tr-suppress-racer-popups div[class*="Tooltip"]:not([class*="theme"]):not([class*="Theme"]) {
           pointer-events: none !important;
           user-select: none !important;
         }
@@ -307,7 +307,7 @@ class TypeRacerOverlayApp {
         styleEl = document.createElement("style");
         styleEl.id = "tr-clean-upsells-style";
         styleEl.textContent = `
-          /* TypeRacer Premium Upsell, Ad & Account Upgrade Modal Overlay Cleaner */
+          /* TypeRacer Premium Upsell & Ad Cleaner (Excluding Theme Pickers & Dialogs) */
           .premiumBanner,
           .sidebarAd,
           .ad-container,
@@ -316,27 +316,50 @@ class TypeRacerOverlayApp {
           .t-promo,
           .t-ad,
           #t-promo,
-          .gwt-Anchor[href*="premium"],
-          .gwt-Anchor[href*="upgrade"],
-          .gwt-Anchor[href*="subscribe"],
-          a[href*="/premium"],
-          a[href*="/upgrade"],
-          a[href*="/subscribe"],
-          a[href*="typeracer.com/premium"],
-          a[href*="typeracer.com/upgrade"],
+          .gwt-Anchor[href*="premium"]:not([class*="theme"]):not([class*="Theme"]),
+          .gwt-Anchor[href*="upgrade"]:not([class*="theme"]):not([class*="Theme"]),
+          .gwt-Anchor[href*="subscribe"]:not([class*="theme"]):not([class*="Theme"]),
+          a[href*="/premium"]:not([class*="theme"]):not([class*="Theme"]),
+          a[href*="/upgrade"]:not([class*="theme"]):not([class*="Theme"]),
+          a[href*="/subscribe"]:not([class*="theme"]):not([class*="Theme"]),
+          a[href*="typeracer.com/premium"]:not([class*="theme"]):not([class*="Theme"]),
+          a[href*="typeracer.com/upgrade"]:not([class*="theme"]):not([class*="Theme"]),
           iframe[src*="doubleclick"],
           iframe[src*="googlesyndication"],
           .pitProfileHeader__premiumBadge,
           .rankTable-upsell,
           .profileTableHeader__premium,
-          div[class*="upsell"],
-          div[class*="adBanner"] {
+          div[class*="upsell"]:not([class*="theme"]):not([class*="Theme"]),
+          div[class*="adBanner"]:not([class*="theme"]):not([class*="Theme"]) {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
             width: 0 !important;
             opacity: 0 !important;
             pointer-events: none !important;
+          }
+
+          /* Explicitly protect Choose Theme Dialog, Modal & Theme Picker Elements */
+          div[class*="theme"],
+          div[class*="Theme"],
+          div[class*="themePicker"],
+          div[class*="ThemePicker"],
+          div[class*="theme-modal"],
+          div[class*="theme-picker"],
+          div[class*="theme-selector"],
+          div[class*="ThemeModal"],
+          div[id*="theme"],
+          div[id*="Theme"],
+          div[aria-label*="theme"],
+          div[aria-label*="Theme"],
+          button[class*="theme"],
+          button[class*="Theme"],
+          a[class*="theme"],
+          a[class*="Theme"] {
+            display: revert !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
           }
         `;
         document.head.appendChild(styleEl);

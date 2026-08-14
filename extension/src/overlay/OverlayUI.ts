@@ -206,27 +206,35 @@ export class OverlayUI {
     document.documentElement.classList.remove("tr-docked-left", "tr-docked-right");
     document.body.classList.remove("tr-docked-left", "tr-docked-right");
 
+    document.documentElement.style.setProperty("--tr-dock-width", `${width}px`);
+    document.body.style.setProperty("--tr-dock-width", `${width}px`);
+
     if (side === "left") {
       document.documentElement.classList.add("tr-docked-left");
       document.body.classList.add("tr-docked-left");
       document.body.style.marginLeft = `${width}px`;
       document.body.style.marginRight = "0px";
-      document.body.style.width = `calc(100% - ${width}px)`;
+      document.body.style.width = `calc(100vw - ${width}px)`;
+      document.body.style.maxWidth = `calc(100vw - ${width}px)`;
     } else {
       document.documentElement.classList.add("tr-docked-right");
       document.body.classList.add("tr-docked-right");
       document.body.style.marginRight = `${width}px`;
       document.body.style.marginLeft = "0px";
-      document.body.style.width = `calc(100% - ${width}px)`;
+      document.body.style.width = `calc(100vw - ${width}px)`;
+      document.body.style.maxWidth = `calc(100vw - ${width}px)`;
     }
   }
 
   private clearBodyMargin(): void {
     document.documentElement.classList.remove("tr-docked-left", "tr-docked-right");
     document.body.classList.remove("tr-docked-left", "tr-docked-right");
+    document.documentElement.style.removeProperty("--tr-dock-width");
+    document.body.style.removeProperty("--tr-dock-width");
     document.body.style.marginLeft = "";
     document.body.style.marginRight = "";
     document.body.style.width = "";
+    document.body.style.maxWidth = "";
   }
 
   private clearDockClasses(): void {
@@ -241,6 +249,10 @@ export class OverlayUI {
     this.containerEl.classList.toggle("transparent", !isSnapped && !!this.settings.transparentOverlay);
     this.containerEl.classList.remove("collapsed");
 
+    const dockW = this.settings.dimensions?.width
+      ? Math.max(280, Math.min(600, this.settings.dimensions.width))
+      : 360;
+
     if (mode === "left-dock") {
       this.containerEl.classList.remove("docked-right");
       this.containerEl.classList.add("docked-left");
@@ -248,9 +260,9 @@ export class OverlayUI {
       this.containerEl.style.right = "auto";
       this.containerEl.style.top = "0px";
       this.containerEl.style.bottom = "0px";
-      this.containerEl.style.width = "360px";
+      this.containerEl.style.width = `${dockW}px`;
       this.containerEl.style.height = "100vh";
-      this.applyBodyMargin("left", 360);
+      this.applyBodyMargin("left", dockW);
     } else if (mode === "right-dock") {
       this.containerEl.classList.remove("docked-left");
       this.containerEl.classList.add("docked-right");
@@ -258,9 +270,9 @@ export class OverlayUI {
       this.containerEl.style.right = "0px";
       this.containerEl.style.top = "0px";
       this.containerEl.style.bottom = "0px";
-      this.containerEl.style.width = "360px";
+      this.containerEl.style.width = `${dockW}px`;
       this.containerEl.style.height = "100vh";
-      this.applyBodyMargin("right", 360);
+      this.applyBodyMargin("right", dockW);
     } else {
       this.clearDockClasses();
       this.clearBodyMargin();
@@ -705,10 +717,12 @@ export class OverlayUI {
 
       if (isNearLeft) {
         currentSnapTarget = "left-dock";
-        this.updateSnapPreview(0, 0, "auto", 0, 360, window.innerHeight);
+        const dockW = this.settings.dimensions?.width ? Math.max(280, Math.min(600, this.settings.dimensions.width)) : 360;
+        this.updateSnapPreview(0, 0, "auto", 0, dockW, window.innerHeight);
       } else if (isNearRight) {
         currentSnapTarget = "right-dock";
-        this.updateSnapPreview(window.innerWidth - 360, 0, "auto", 0, 360, window.innerHeight);
+        const dockW = this.settings.dimensions?.width ? Math.max(280, Math.min(600, this.settings.dimensions.width)) : 360;
+        this.updateSnapPreview(window.innerWidth - dockW, 0, "auto", 0, dockW, window.innerHeight);
       } else {
         currentSnapTarget = "none";
         this.snapPreviewEl.classList.remove("visible");
@@ -769,6 +783,33 @@ export class OverlayUI {
           let newL = startL;
           let newT = startT;
 
+          // If currently docked to the left, resizing right edge adjusts dock width dynamically
+          if (this.settings.snapMode === "left-dock") {
+            newW = Math.max(260, Math.min(Math.floor(window.innerWidth * 0.6), startW + dx));
+            this.containerEl.style.width = `${newW}px`;
+            this.containerEl.style.height = "100vh";
+            this.containerEl.style.left = "0px";
+            this.containerEl.style.top = "0px";
+            this.containerEl.style.right = "auto";
+            this.applyBodyMargin("left", newW);
+            this.settings.dimensions = { width: newW, height: window.innerHeight };
+            return;
+          }
+
+          // If currently docked to the right, resizing left edge adjusts dock width dynamically
+          if (this.settings.snapMode === "right-dock") {
+            newW = Math.max(260, Math.min(Math.floor(window.innerWidth * 0.6), startW - dx));
+            this.containerEl.style.width = `${newW}px`;
+            this.containerEl.style.height = "100vh";
+            this.containerEl.style.left = "auto";
+            this.containerEl.style.right = "0px";
+            this.containerEl.style.top = "0px";
+            this.applyBodyMargin("right", newW);
+            this.settings.dimensions = { width: newW, height: window.innerHeight };
+            return;
+          }
+
+          // Floating Resize
           if (dir?.includes("e")) newW = Math.max(280, Math.min(600, startW + dx));
           if (dir?.includes("s")) newH = Math.max(200, Math.min(850, startH + dy));
           if (dir?.includes("w")) {
@@ -806,10 +847,16 @@ export class OverlayUI {
     if (typeof ResizeObserver !== "undefined") {
       const ro = new ResizeObserver((entries) => {
         for (const entry of entries) {
-          if (!this.settings.collapsed && (!this.settings.snapMode || this.settings.snapMode === "none")) {
-            const w = Math.round(entry.contentRect.width);
-            const h = Math.round(entry.contentRect.height);
-            if (w > 0 && h > 0) {
+          const w = Math.round(entry.contentRect.width);
+          const h = Math.round(entry.contentRect.height);
+          if (w > 0) {
+            if (this.settings.snapMode === "left-dock") {
+              this.applyBodyMargin("left", w);
+              this.settings.dimensions = { width: w, height: window.innerHeight };
+            } else if (this.settings.snapMode === "right-dock") {
+              this.applyBodyMargin("right", w);
+              this.settings.dimensions = { width: w, height: window.innerHeight };
+            } else if (!this.settings.collapsed && h > 0) {
               this.settings.dimensions = { width: w, height: h };
             }
           }

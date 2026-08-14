@@ -128,23 +128,23 @@ class TypeRacerOverlayApp {
       style = document.createElement("style");
       style.id = "tr-docking-layout-style";
       style.textContent = `
-        /* Docking Layout Adjustment Styles - Guarantees full site visibility */
+        /* Dynamic Docking Layout Adjustment Styles - Scales in real time with exact protrusion */
         html.tr-docked-left, body.tr-docked-left {
-          margin-left: 360px !important;
+          margin-left: var(--tr-dock-width, 360px) !important;
           margin-right: 0 !important;
-          width: calc(100vw - 360px) !important;
-          max-width: calc(100vw - 360px) !important;
+          width: calc(100vw - var(--tr-dock-width, 360px)) !important;
+          max-width: calc(100vw - var(--tr-dock-width, 360px)) !important;
           box-sizing: border-box !important;
-          transition: margin 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease !important;
+          transition: margin 0.15s ease, width 0.15s ease !important;
         }
 
         html.tr-docked-right, body.tr-docked-right {
-          margin-right: 360px !important;
+          margin-right: var(--tr-dock-width, 360px) !important;
           margin-left: 0 !important;
-          width: calc(100vw - 360px) !important;
-          max-width: calc(100vw - 360px) !important;
+          width: calc(100vw - var(--tr-dock-width, 360px)) !important;
+          max-width: calc(100vw - var(--tr-dock-width, 360px)) !important;
           box-sizing: border-box !important;
-          transition: margin 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease !important;
+          transition: margin 0.15s ease, width 0.15s ease !important;
         }
 
         html.tr-docked-left #root,
@@ -168,8 +168,8 @@ class TypeRacerOverlayApp {
         html.tr-docked-left div[class*="max-w-4xl"],
         html.tr-docked-right .max-w-4xl,
         html.tr-docked-right div[class*="max-w-4xl"] {
-          max-width: calc(100vw - 380px) !important;
-          width: calc(100vw - 380px) !important;
+          max-width: calc(100vw - var(--tr-dock-width, 360px) - 24px) !important;
+          width: calc(100vw - var(--tr-dock-width, 360px) - 24px) !important;
           box-sizing: border-box !important;
         }
       `;

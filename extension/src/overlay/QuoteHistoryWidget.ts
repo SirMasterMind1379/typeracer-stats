@@ -16,8 +16,9 @@ export class QuoteHistoryWidget {
     if (!record || record.timesTyped === 0) {
       this.container.innerHTML = `
         <div class="tr-card">
+          <div class="tr-card-title">Quote History</div>
           <div class="tr-quote-banner new-text">
-            <strong>🆕 New Text</strong> — First time typing this quote!
+            <strong>🆕 New Quote</strong> &mdash; First time encountering this text.
           </div>
         </div>
       `;
@@ -26,10 +27,13 @@ export class QuoteHistoryWidget {
 
     this.container.innerHTML = `
       <div class="tr-card">
+        <div class="tr-card-title">
+          <span>Quote History</span>
+          <span style="font-size: 10px; color: #fbbf24; font-weight: 700;">Typed ${record.timesTyped}x</span>
+        </div>
         <div class="tr-quote-banner repeat-text">
-          <strong>🔁 Previously Typed (${record.timesTyped}x)</strong>
-          <div class="tr-quote-stats">
-            <span>Last: <strong>${record.lastSpeed.toFixed(1)} WPM</strong> (${record.lastAccuracy.toFixed(1)}%)</span>
+          <div class="tr-quote-stats" style="margin-top: 0; justify-content: space-between;">
+            <span>Last Attempt: <strong>${record.lastSpeed.toFixed(1)} WPM</strong> (${record.lastAccuracy.toFixed(1)}%)</span>
             <span>Best: <strong>${record.bestSpeed.toFixed(1)} WPM</strong></span>
           </div>
         </div>
@@ -41,8 +45,9 @@ export class QuoteHistoryWidget {
     if (!previousRecord || previousRecord.timesTyped === 0) {
       this.container.innerHTML = `
         <div class="tr-card">
+          <div class="tr-card-title">Quote History</div>
           <div class="tr-quote-banner new-text">
-            ✨ First completion saved! Baseline: <strong>${newRace.speed.toFixed(1)} WPM</strong> (${newRace.accuracy.toFixed(1)}% Acc).
+            ✨ <strong>New quote recorded!</strong> Baseline saved: <strong>${newRace.speed.toFixed(1)} WPM</strong> (${newRace.accuracy.toFixed(1)}% Acc).
           </div>
         </div>
       `;
@@ -62,8 +67,12 @@ export class QuoteHistoryWidget {
 
     this.container.innerHTML = `
       <div class="tr-card">
+        <div class="tr-card-title">
+          <span>Quote Performance Delta</span>
+          <span style="font-size: 10px; color: ${isGain ? '#22c55e' : '#ef4444'}; font-weight: 700;">Attempt #${previousRecord.timesTyped + 1}</span>
+        </div>
         <div class="tr-delta-pill ${pillClass}">
-          <span>${icon} <strong>${sign}${wpmDiff.toFixed(1)} WPM</strong> vs last time (${previousRecord.lastSpeed.toFixed(1)} WPM)${accText}</span>
+          <span>${icon} <strong>${sign}${wpmDiff.toFixed(1)} WPM</strong> vs previous attempt (${previousRecord.lastSpeed.toFixed(1)} WPM)${accText}</span>
         </div>
       </div>
     `;

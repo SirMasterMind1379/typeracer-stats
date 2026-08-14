@@ -1,4 +1,5 @@
 import type { ExtensionRace } from "../types";
+import { formatDisplayDate } from "../types";
 
 export interface TypeRacerHookEvents {
   onQuoteLoaded: (textId: number, quoteText: string) => void;
@@ -25,30 +26,52 @@ export class TypeRacerHook {
   }
 
   public detectUsername(): string {
-    // 1. Check profile link in header/DOM
-    const profileLinks = document.querySelectorAll("a[href*='/pit/profile?user='], a[href*='/pit/racer?user=']");
+    // 1. Check cached storage
+    try {
+      const stored = localStorage.getItem("tr_username");
+      if (stored && stored.trim().length >= 2) return stored.trim();
+    } catch {
+      // ignore
+    }
+
+    // 2. Check profile link in header/DOM
+    const profileLinks = document.querySelectorAll(
+      "a[href*='/pit/profile?user='], a[href*='/pit/racer?user='], a[href*='/pit/race_history?user='], a[href*='/profile/'], a[href*='/racer/']"
+    );
     for (const link of profileLinks) {
       const href = link.getAttribute("href") || "";
-      const match = href.match(/user=([a-zA-Z0-9_]+)/);
-      if (match && match[1]) return match[1];
+      const match = href.match(/user=([a-zA-Z0-9_]+)/) || href.match(/(?:profile|racer)\/([a-zA-Z0-9_]+)/);
+      if (match && match[1]) {
+        try {
+          localStorage.setItem("tr_username", match[1]);
+        } catch {}
+        return match[1];
+      }
     }
 
-    // 2. Check racer name DOM element
-    const userEl = document.querySelector(".racerProfileLink, .userName, .profileNav .name, .racerName, span[class*='userName']");
+    // 3. Check racer name DOM elements
+    const userEl = document.querySelector(".racerProfileLink, .userName, .profileNav .name, .racerName, span[class*='userName'], div[class*='userName']");
     if (userEl && userEl.textContent) {
-      const name = userEl.textContent.trim();
-      if (name && !name.includes(" ") && name.length >= 2) return name;
+      const name = userEl.textContent.trim().replace(/^@/, "");
+      if (name && !name.includes(" ") && name.length >= 2 && !name.toLowerCase().includes("guest")) {
+        try {
+          localStorage.setItem("tr_username", name);
+        } catch {}
+        return name;
+      }
     }
 
-    // 3. Check Cookie
-    const cookieMatch = document.cookie.match(/(?:^|; )tr_username=([^;]*)/);
-    if (cookieMatch && cookieMatch[1]) return decodeURIComponent(cookieMatch[1]);
+    // 4. Check Cookies
+    const cookieMatch = document.cookie.match(/(?:^|; )(?:tr_username|pt_user|username)=([^;]*)/);
+    if (cookieMatch && cookieMatch[1]) {
+      const name = decodeURIComponent(cookieMatch[1]).trim();
+      if (name && name.length >= 2) return name;
+    }
 
     return "";
   }
 
   private initClickListeners(): void {
-    // Listen for user clicks on "Race Again", "Enter a Typing Race", "Play the Quote of the Day", "Practice Yourself", "Create Racetrack", etc.
     const START_TRIGGER_REGEX = /race\s*again|enter\s*a\s*typing\s*race|quote\s*of\s*the\s*day|practice\s*yourself|create\s*racetrack|race\s*your\s*friends|join\s*race|\bpractice\b/i;
 
     document.addEventListener("click", (e: MouseEvent) => {
@@ -73,7 +96,6 @@ export class TypeRacerHook {
   }
 
   private initNetworkInterceptor(): void {
-    // Intercept fetch responses
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const response = await originalFetch.apply(window, args);
@@ -90,7 +112,6 @@ export class TypeRacerHook {
       return response;
     };
 
-    // Intercept XHR responses
     const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
     const hook = this;
@@ -124,24 +145,25 @@ export class TypeRacerHook {
     const raceList = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [data];
     for (const item of raceList) {
       if (item && item.wpm != null && item.rid != null) {
-        const raceId = String(item.rid);
-        if (this.lastHandledRaceId === raceId) continue;
-        this.lastHandledRaceId = raceId;
+        const raceId = Number(item.rid) || Date.now();
+        if (this.lastHandledRaceId === String(raceId)) continue;
+        this.lastHandledRaceId = String(raceId);
         this.lastHandledRaceTime = Date.now();
         this.isRaceInProgress = false;
 
+        const ts = item.t ? (typeof item.t === "number" && item.t < 1e12 ? item.t * 1000 : Number(item.t)) : Date.now();
+
         const race: ExtensionRace = {
           id: raceId,
-          date: item.t ? (typeof item.t === 'number' ? new Date(item.t * 1000).toISOString() : String(item.t)) : new Date().toISOString(),
-          speed: Number(Number(item.wpm).toFixed(1)),
-          accuracy: item.acc != null ? Number((item.acc * (item.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
-          points: item.pts != null ? Number(item.pts) : null,
-          rank: item.r || 1,
-          totalRacers: item.nr || 5,
           textId: item.tid || this.currentTextId || 0,
-          won: item.r === 1,
+          wpm: Math.round(Number(item.wpm) * 10) / 10,
+          accuracy: item.acc != null ? Math.round(Number(item.acc * (item.acc <= 1 ? 100 : 1)) * 10) / 10 : 100,
+          points: item.pts != null ? Number(item.pts) : undefined,
+          rank: item.r || 1,
+          racers: item.nr || 5,
+          timestamp: ts,
+          dateStr: formatDisplayDate(ts),
           mode: item.gn || item.mode || "multiplayer",
-          quoteText: this.currentQuoteText,
         };
         this.events.onRaceCompleted(race);
       }
@@ -160,14 +182,18 @@ export class TypeRacerHook {
       }
 
       // 1. Detect active typing input or countdown (Race Start Cue)
-      const activeInput = document.querySelector("input.txtInput:not([disabled]), textarea.txtInput:not([disabled]), input[data-qa='game-input']:not([disabled]), .gameView input:not([disabled])");
+      const activeInput = document.querySelector(
+        "input.txtInput:not([disabled]), textarea.txtInput:not([disabled]), input[data-qa='game-input']:not([disabled]), .gameView input:not([disabled])"
+      );
       const countdownBox = document.querySelector(".countdownPopup, .popupContent, [class*='countdown']");
       if ((activeInput || countdownBox) && !this.isRaceInProgress) {
         this.handleRaceStartCue();
       }
 
       // 2. Detect quote text & exact textId in game box
-      const textContainer = document.querySelector(".gameView .textPane, .gameView .unhandled, .gameView [data-qa='quote'], [class*='textPane'], [class*='unhandled']");
+      const textContainer = document.querySelector(
+        ".gameView .textPane, .gameView .unhandled, .gameView [data-qa='quote'], [class*='textPane'], [class*='unhandled']"
+      );
       if (textContainer && textContainer.textContent) {
         const fullText = textContainer.textContent.trim();
         if (fullText && fullText !== this.currentQuoteText) {
@@ -226,7 +252,7 @@ export class TypeRacerHook {
       const isFinished = raceAgainBtn != null || resultLink != null || rankPanel != null;
 
       if (isFinished && (this.isRaceInProgress || Date.now() - this.lastHandledRaceTime > 4000)) {
-        let raceId = "";
+        let raceId: number | string = "";
         if (resultLink) {
           const href = resultLink.getAttribute("href") || "";
           const match = href.match(/id=([^&]+)/);
@@ -234,10 +260,10 @@ export class TypeRacerHook {
         }
 
         if (!raceId) {
-          raceId = `race_${Date.now()}`;
+          raceId = Date.now();
         }
 
-        if (this.lastHandledRaceId !== raceId) {
+        if (this.lastHandledRaceId !== String(raceId)) {
           // Extract WPM & Accuracy
           const wpmMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*wpm/i);
           const accMatch = document.body.innerText.match(/(\d+(?:\.\d+)?)\s*%\s*accuracy/i);
@@ -247,21 +273,23 @@ export class TypeRacerHook {
             const acc = accMatch ? parseFloat(accMatch[1]) : 100;
 
             this.isRaceInProgress = false;
-            this.lastHandledRaceId = raceId;
+            this.lastHandledRaceId = String(raceId);
             this.lastHandledRaceTime = Date.now();
 
+            const numId = typeof raceId === "number" ? raceId : parseInt(String(raceId).replace(/\D/g, ""), 10) || Date.now();
+            const now = Date.now();
+
             const race: ExtensionRace = {
-              id: raceId,
-              date: new Date().toISOString(),
-              speed: Number(wpm.toFixed(1)),
-              accuracy: Number(acc.toFixed(1)),
-              points: null,
-              rank: 1,
-              totalRacers: 5,
+              id: numId,
               textId: this.currentTextId,
-              won: true,
+              wpm: Math.round(wpm * 10) / 10,
+              accuracy: Math.round(acc * 10) / 10,
+              points: undefined,
+              rank: 1,
+              racers: 5,
+              timestamp: now,
+              dateStr: formatDisplayDate(now),
               mode: "multiplayer",
-              quoteText: this.currentQuoteText,
             };
 
             this.events.onRaceCompleted(race);
@@ -272,7 +300,7 @@ export class TypeRacerHook {
 
     this.observer = new MutationObserver(() => checkDOM());
     this.observer.observe(document.body, { childList: true, subtree: true });
-    
+
     // Immediate check
     checkDOM();
   }

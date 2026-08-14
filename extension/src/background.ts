@@ -1,5 +1,5 @@
 // Chrome Extension Background Service Worker (Manifest V3)
-import { parseApiRace } from "./types";
+import { parseApiRace, formatDisplayDate } from "./types";
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("[TypeRacer Overlay] Service Worker installed.");
@@ -88,20 +88,20 @@ async function fetchRacesForUser(username: string): Promise<any[]> {
           const acc = accMatch ? parseFloat(accMatch[1]) : 98.0;
           const rank = rankMatch ? parseInt(rankMatch[1], 10) : 1;
           const nr = rankMatch ? parseInt(rankMatch[2], 10) : 5;
-          const dateStr = dateMatch ? new Date(dateMatch[1]).toISOString() : new Date().toISOString();
+          const timestamp = dateMatch ? new Date(dateMatch[1]).getTime() : Date.now();
           const mode = modeMatch ? modeMatch[1].trim() : "multiplayer";
 
           scraped.push({
-            id: `pit_${numMatch ? numMatch[1] : Math.random()}`,
-            date: dateStr,
-            speed: wpm,
-            accuracy: acc,
-            points: ptsMatch ? parseInt(ptsMatch[1], 10) : null,
-            rank,
-            totalRacers: nr,
+            id: numMatch ? parseInt(numMatch[1], 10) : timestamp,
             textId: 0,
-            won: rank === 1,
+            wpm,
+            accuracy: acc,
+            rank,
+            racers: nr,
+            timestamp,
+            dateStr: formatDisplayDate(timestamp),
             mode,
+            points: ptsMatch ? parseInt(ptsMatch[1], 10) : undefined,
           });
         }
       }

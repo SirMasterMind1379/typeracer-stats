@@ -2,7 +2,7 @@ import type { ExtensionRace, QuoteHistoryRecord } from "../types";
 
 export class QuoteHistoryWidget {
   private container: HTMLElement;
-  private activeRaceId: string | null = null;
+  private activeRaceId: string | number | null = null;
   private activeType: "pre" | "post" | null = null;
 
   constructor(container: HTMLElement) {
@@ -50,20 +50,22 @@ export class QuoteHistoryWidget {
     this.activeRaceId = newRace.id || null;
     this.activeType = "post";
 
+    const newAcc = newRace.accuracy ?? 98.0;
+
     if (!previousRecord || previousRecord.timesTyped === 0) {
       this.container.innerHTML = `
         <div class="tr-card">
           <div class="tr-card-title">Quote History</div>
           <div class="tr-quote-banner new-text">
-            ✨ <strong>New quote recorded!</strong> Baseline saved: <strong>${newRace.speed.toFixed(1)} WPM</strong> (${newRace.accuracy.toFixed(1)}% Acc).
+            ✨ <strong>New quote recorded!</strong> Baseline saved: <strong>${newRace.wpm.toFixed(1)} WPM</strong> (${newAcc.toFixed(1)}% Acc).
           </div>
         </div>
       `;
       return;
     }
 
-    const wpmDiff = Number((newRace.speed - previousRecord.lastSpeed).toFixed(1));
-    const accDiff = Number((newRace.accuracy - previousRecord.lastAccuracy).toFixed(1));
+    const wpmDiff = Number((newRace.wpm - previousRecord.lastSpeed).toFixed(1));
+    const accDiff = Number((newAcc - previousRecord.lastAccuracy).toFixed(1));
 
     const isGain = wpmDiff >= 0;
     const pillClass = isGain ? "gain" : "loss";
@@ -86,8 +88,8 @@ export class QuoteHistoryWidget {
     `;
   }
 
-  public validateAgainstLatestRace(latestRaceId?: string): void {
-    if (this.activeType === "post" && this.activeRaceId && latestRaceId && this.activeRaceId !== latestRaceId) {
+  public validateAgainstLatestRace(latestRaceId?: string | number): void {
+    if (this.activeType === "post" && this.activeRaceId && latestRaceId && String(this.activeRaceId) !== String(latestRaceId)) {
       this.clear();
     }
   }

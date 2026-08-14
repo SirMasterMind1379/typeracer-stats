@@ -56,7 +56,7 @@ class TypeRacerOverlayApp {
 
     // 2. Wire Manual Refresh/Reload Button Handler
     this.ui.setOnRefresh(async () => {
-      const user = this.activeUsername || this.ui.getSettings().username;
+      const user = this.activeUsername || this.ui.getSettings().username || localStorage.getItem("tr_username") || "";
       if (user) {
         await this.quoteStore.syncFromAPI(user);
         this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(user);
@@ -92,13 +92,32 @@ class TypeRacerOverlayApp {
       onUsernameDetected: (user) => this.handleUsernameChanged(user),
     });
 
-    // 7. Detect Username from DOM / Cookies / Settings
-    const settingsUsername = this.ui.getSettings().username;
+    // 7. Detect Username from Settings / LocalStorage / DOM
+    const settingsUsername = this.ui.getSettings().username || "";
+    let cachedUsername = "";
+    try {
+      cachedUsername = localStorage.getItem("tr_username") || "";
+    } catch {}
     const domUsername = this.trHook.detectUsername();
-    const effectiveUsername = domUsername || settingsUsername || "";
+    const effectiveUsername = domUsername || settingsUsername || cachedUsername || "";
 
     if (effectiveUsername) {
-      await this.handleUsernameChanged(effectiveUsername);
+      this.activeUsername = effectiveUsername;
+      this.ui.updateUsernameTitle(effectiveUsername);
+      this.ui.getSettings().username = effectiveUsername;
+      this.ui.saveSettings();
+      try {
+        localStorage.setItem("tr_username", effectiveUsername);
+      } catch {}
+
+      // 1. Immediately render cached data (instant on reload!)
+      await this.refreshOverlayData();
+
+      // 2. Concurrently sync latest data from API
+      this.quoteStore.syncFromAPI(effectiveUsername).then(async () => {
+        this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(effectiveUsername);
+        await this.refreshOverlayData();
+      });
     } else {
       await this.refreshOverlayData();
     }
@@ -108,8 +127,9 @@ class TypeRacerOverlayApp {
 
     // 9. Window Focus / Visibility change auto-refresh
     window.addEventListener("focus", () => {
-      if (this.activeUsername) {
-        this.quoteStore.syncFromAPI(this.activeUsername).then(() => {
+      const user = this.activeUsername || this.ui.getSettings().username || localStorage.getItem("tr_username") || "";
+      if (user) {
+        this.quoteStore.syncFromAPI(user).then(() => {
           this.refreshOverlayData();
         });
       }
@@ -481,19 +501,29 @@ class TypeRacerOverlayApp {
   }
 
   private async handleUsernameChanged(newUsername: string): Promise<void> {
+    if (!newUsername) return;
     if (this.activeUsername === newUsername) return;
     this.activeUsername = newUsername;
 
     this.ui.updateUsernameTitle(newUsername);
+    this.ui.getSettings().username = newUsername;
+    this.ui.saveSettings();
+    try {
+      localStorage.setItem("tr_username", newUsername);
+    } catch {}
 
-    // Fetch QOTD status from API
-    this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(newUsername);
-
-    // Sync full race history from API
-    await this.quoteStore.syncFromAPI(newUsername);
-
-    // Refresh overlay UI
+    // Immediately render whatever local cached stats we have
     await this.refreshOverlayData();
+
+    // Fetch fresh QOTD and sync race history from API in parallel
+    this.streakTracker.checkQOTDFromAPI(newUsername).then((qDone) => {
+      this.isQotdDoneFromApi = qDone;
+      this.refreshOverlayData();
+    });
+
+    this.quoteStore.syncFromAPI(newUsername).then(() => {
+      this.refreshOverlayData();
+    });
   }
 
   private async refreshOverlayData(highlightNew: boolean = false): Promise<void> {
@@ -504,7 +534,8 @@ class TypeRacerOverlayApp {
       this.quoteHistoryWidget.validateAgainstLatestRace(races[0].id);
     }
 
-    this.recentRacesWidget.render(races, highlightNew, this.activeUsername);
+    const effectiveUser = this.activeUsername || this.ui.getSettings().username || "";
+    this.recentRacesWidget.render(races, highlightNew, effectiveUser);
 
     const streakInfo = this.streakTracker.calculateStreakInfo(races, this.isQotdDoneFromApi);
     this.streakWidget.render(streakInfo);
@@ -562,7 +593,7 @@ class TypeRacerOverlayApp {
 
   private async handleRaceCompleted(race: ExtensionRace): Promise<void> {
     this.isRaceActive = false;
-    const username = this.activeUsername || "local_user";
+    const username = this.activeUsername || this.ui.getSettings().username || "local_user";
 
     // Restore racer tooltips on race completion
     document.documentElement.classList.remove("tr-suppress-racer-popups");
@@ -587,9 +618,9 @@ class TypeRacerOverlayApp {
     await this.refreshOverlayData(true);
 
     // 5. Sync from API in background to ensure 100% server sync
-    if (this.activeUsername) {
+    if (username && username !== "local_user") {
       setTimeout(() => {
-        this.quoteStore.syncFromAPI(this.activeUsername).then(() => {
+        this.quoteStore.syncFromAPI(username).then(() => {
           this.refreshOverlayData();
         });
       }, 800);

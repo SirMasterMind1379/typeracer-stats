@@ -26,7 +26,7 @@ export class QuoteStore {
         if (!db.objectStoreNames.contains(STORE_RACES)) {
           const store = db.createObjectStore(STORE_RACES, { keyPath: "id" });
           store.createIndex("username", "username", { unique: false });
-          store.createIndex("date", "date", { unique: false });
+          store.createIndex("timestamp", "timestamp", { unique: false });
           store.createIndex("textId", "textId", { unique: false });
         }
         if (!db.objectStoreNames.contains(STORE_QUOTES)) {
@@ -43,6 +43,8 @@ export class QuoteStore {
   public async syncFromAPI(username: string): Promise<ExtensionRace[]> {
     if (!username) return [];
 
+    let fetchedRaces: ExtensionRace[] = [];
+
     // 1. Chrome Extension Background Messaging (Bypasses CORS via Service Worker)
     if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id && chrome.runtime.sendMessage) {
       try {
@@ -57,11 +59,7 @@ export class QuoteStore {
         });
 
         if (res && res.success && Array.isArray(res.races) && res.races.length > 0) {
-          this.recentRacesMemory = res.races;
-          for (const r of res.races) {
-            await this.saveRace(r, username);
-          }
-          return res.races;
+          fetchedRaces = res.races;
         }
       } catch {
         // Ignore extension background messaging error
@@ -69,7 +67,7 @@ export class QuoteStore {
     }
 
     // 2. Tampermonkey GM_xmlhttpRequest Fallback (Bypasses CORS for Userscript)
-    if (typeof (window as any).GM_xmlhttpRequest === "function") {
+    if (fetchedRaces.length === 0 && typeof (window as any).GM_xmlhttpRequest === "function") {
       try {
         const jsonText: string = await new Promise((resolve, reject) => {
           (window as any).GM_xmlhttpRequest({
@@ -81,43 +79,45 @@ export class QuoteStore {
         });
         const rawRaces = JSON.parse(jsonText);
         if (Array.isArray(rawRaces)) {
-          const races: ExtensionRace[] = rawRaces.map(parseApiRace);
-          if (races.length > 0) {
-            this.recentRacesMemory = races;
-            for (const r of races) await this.saveRace(r, username);
-            return races;
-          }
+          fetchedRaces = rawRaces.map(parseApiRace);
         }
       } catch {
         // Ignore GM fetch error
       }
     }
 
-    // 3. Direct fetch fallback (quietly catch page CORS blocks)
-    try {
-      const res = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`);
-      if (res.ok) {
-        const json = await res.json();
-        const rawRaces = Array.isArray(json) ? json : [];
-        const races: ExtensionRace[] = rawRaces.map(parseApiRace);
-
-        if (races.length > 0) {
-          this.recentRacesMemory = races;
-          for (const r of races) {
-            await this.saveRace(r, username);
-          }
-          return races;
+    // 3. Direct fetch fallback
+    if (fetchedRaces.length === 0) {
+      try {
+        const res = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`);
+        if (res.ok) {
+          const json = await res.json();
+          const rawRaces = Array.isArray(json) ? json : [];
+          fetchedRaces = rawRaces.map(parseApiRace);
         }
+      } catch {
+        // Quietly swallow CORS error in page context
       }
-    } catch {
-      // Quietly swallow CORS error in page context since background worker handles it
+    }
+
+    if (fetchedRaces.length > 0) {
+      this.recentRacesMemory = fetchedRaces;
+      try {
+        localStorage.setItem("tr_overlay_recent_races", JSON.stringify(fetchedRaces.slice(0, 50)));
+      } catch {
+        // ignore
+      }
+      for (const r of fetchedRaces) {
+        await this.saveRace(r, username);
+      }
+      return fetchedRaces;
     }
 
     return [];
   }
 
   public async saveRace(race: ExtensionRace, username: string = "local_user"): Promise<void> {
-    if (!this.recentRacesMemory.some(r => r.id === race.id)) {
+    if (!this.recentRacesMemory.some((r) => r.id === race.id)) {
       this.recentRacesMemory.unshift(race);
       if (this.recentRacesMemory.length > 50) {
         this.recentRacesMemory.pop();
@@ -127,7 +127,7 @@ export class QuoteStore {
     try {
       const db = await this.initDB();
       const tx = db.transaction([STORE_RACES, STORE_QUOTES], "readwrite");
-      
+
       // 1. Save Race record
       const raceStore = tx.objectStore(STORE_RACES);
       raceStore.put({ ...race, username: username.toLowerCase() });
@@ -139,7 +139,7 @@ export class QuoteStore {
         getReq.onsuccess = () => {
           const existing: QuoteHistoryRecord = getReq.result || {
             textId: race.textId,
-            quoteText: race.quoteText || "",
+            quoteText: "",
             timesTyped: 0,
             lastSpeed: 0,
             lastAccuracy: 0,
@@ -149,12 +149,12 @@ export class QuoteStore {
 
           const updated: QuoteHistoryRecord = {
             textId: race.textId,
-            quoteText: race.quoteText || existing.quoteText || "",
+            quoteText: existing.quoteText || "",
             timesTyped: existing.timesTyped + 1,
-            lastSpeed: race.speed,
-            lastAccuracy: race.accuracy,
-            bestSpeed: Math.max(existing.bestSpeed, race.speed),
-            lastDate: race.date,
+            lastSpeed: race.wpm,
+            lastAccuracy: race.accuracy ?? 98.0,
+            bestSpeed: Math.max(existing.bestSpeed, race.wpm),
+            lastDate: race.dateStr,
           };
           quoteStore.put(updated);
         };
@@ -168,7 +168,7 @@ export class QuoteStore {
       const stored = JSON.parse(localStorage.getItem("tr_overlay_recent_races") || "[]");
       if (!stored.some((r: any) => r.id === race.id)) {
         stored.unshift(race);
-        localStorage.setItem("tr_overlay_recent_races", JSON.stringify(stored.slice(0, 20)));
+        localStorage.setItem("tr_overlay_recent_races", JSON.stringify(stored.slice(0, 50)));
       }
     } catch {
       // Fallback ignore
@@ -194,8 +194,8 @@ export class QuoteStore {
     if (this.recentRacesMemory.length > 0) {
       return this.recentRacesMemory.slice(0, limit);
     }
-    
-    // Try localStorage fallback first
+
+    // Try localStorage fallback first (Instant on browser reload)
     try {
       const stored: ExtensionRace[] = JSON.parse(localStorage.getItem("tr_overlay_recent_races") || "[]");
       if (stored.length > 0) {
@@ -215,8 +215,10 @@ export class QuoteStore {
         const req = store.getAll();
         req.onsuccess = () => {
           const all: ExtensionRace[] = req.result || [];
-          all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          this.recentRacesMemory = all;
+          all.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          if (all.length > 0) {
+            this.recentRacesMemory = all;
+          }
           resolve(all.slice(0, limit));
         };
         req.onerror = () => resolve([]);

@@ -1,5 +1,5 @@
 import type { ExtensionRace, StreakInfo } from "../types";
-import { isCompetitiveRace } from "../types";
+import { isCompetitiveRace, getToday00UTC, formatCountdown } from "../types";
 
 export class StreakTracker {
   private targetRaces = 10;
@@ -9,20 +9,10 @@ export class StreakTracker {
   }
 
   public getSecondsUntilReset(): number {
-    const now = new Date();
-    const nextReset = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1,
-      0, 0, 0, 0
-    ));
-    return Math.max(0, Math.floor((nextReset.getTime() - now.getTime()) / 1000));
-  }
-
-  public formatSeconds(totalSec: number): string {
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
+    const now = Date.now();
+    const today00UTC = getToday00UTC();
+    const nextResetUTC = today00UTC + 24 * 60 * 60 * 1000;
+    return Math.max(0, Math.floor((nextResetUTC - now) / 1000));
   }
 
   public async checkQOTDFromAPI(username: string): Promise<boolean> {
@@ -100,13 +90,12 @@ export class StreakTracker {
   }
 
   public calculateStreakInfo(races: ExtensionRace[], qotdDoneOverride = false): StreakInfo {
-    const todayStr = this.getTodayUTCDateString();
-    
-    // Filter races completed today in UTC
+    const today00UTC = getToday00UTC();
+
+    // Filter races completed today in UTC (since 00:00 UTC)
     const todayRaces = races.filter((r) => {
-      if (!r.date) return false;
-      const raceDate = r.date.includes("T") ? r.date.slice(0, 10) : new Date(r.date).toISOString().slice(0, 10);
-      return raceDate === todayStr;
+      const ts = typeof r.timestamp === "number" ? r.timestamp : 0;
+      return ts >= today00UTC;
     });
 
     // Multiplayer races ONLY for 10-race streak calculation
@@ -118,11 +107,11 @@ export class StreakTracker {
     const qotdDone = qotdDoneOverride || todayRaces.some((r) => r.mode?.toLowerCase().includes("qotd"));
 
     // Calculate Best WPM Today across all races today
-    const wpmsToday = todayRaces.map((r) => r.speed);
+    const wpmsToday = todayRaces.map((r) => r.wpm).filter((w) => typeof w === "number" && !isNaN(w) && w > 0);
     const bestWpmToday = wpmsToday.length > 0 ? Math.max(...wpmsToday) : null;
 
     const secondsUntilReset = this.getSecondsUntilReset();
-    const formattedCountdown = this.formatSeconds(secondsUntilReset);
+    const formattedCountdown = formatCountdown(secondsUntilReset);
 
     return {
       racesDoneToday,

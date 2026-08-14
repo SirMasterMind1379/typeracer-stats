@@ -50,7 +50,7 @@ export class RecentRacesWidget {
     const n = chronological.length;
 
     // Calculate line chart dynamic min/max with padding for vertical expansion
-    const wpms = recent10.map((r) => r.speed);
+    const wpms = recent10.map((r) => r.wpm);
     const rawMax = Math.max(...wpms);
     const rawMin = Math.min(...wpms);
     const span = rawMax - rawMin;
@@ -74,7 +74,7 @@ export class RecentRacesWidget {
     let sumXX = 0;
     for (let i = 0; i < n; i++) {
       const x = i;
-      const y = chronological[i].speed;
+      const y = chronological[i].wpm;
       sumX += x;
       sumY += y;
       sumXY += x * y;
@@ -100,10 +100,10 @@ export class RecentRacesWidget {
     const points = chronological.map((r, i) => {
       const stepX = n > 1 ? chartW / (n - 1) : chartW / 2;
       const x = paddingX + i * stepX;
-      const heightPercent = Math.max(0.02, Math.min(0.98, (r.speed - minWpm) / (maxWpm - minWpm || 1)));
+      const heightPercent = Math.max(0.02, Math.min(0.98, (r.wpm - minWpm) / (maxWpm - minWpm || 1)));
       const y = paddingY + (1 - heightPercent) * chartH;
       const url = this.buildTypeRacerResultUrl(r, username);
-      return { x, y, speed: r.speed, accuracy: r.accuracy, url, isNewest: i === n - 1 };
+      return { x, y, wpm: r.wpm, accuracy: r.accuracy ?? 98.0, url, isNewest: i === n - 1 };
     });
 
     // Trendline Coordinates
@@ -141,7 +141,7 @@ export class RecentRacesWidget {
       return `
         <a href="${p.url}" target="_blank" rel="noopener" class="tr-point-group">
           <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${circleR}" fill="${p.isNewest ? '#ffffff' : '#ef4444'}" stroke="#9e1b24" stroke-width="${strokeW}" />
-          <text x="${p.x.toFixed(1)}" y="${(p.y - 6).toFixed(1)}" font-size="8.5" fill="${p.isNewest ? '#ffffff' : '#d1d5db'}" text-anchor="middle" font-weight="${p.isNewest ? '800' : '600'}">${p.speed.toFixed(1)}</text>
+          <text x="${p.x.toFixed(1)}" y="${(p.y - 6).toFixed(1)}" font-size="8.5" fill="${p.isNewest ? '#ffffff' : '#d1d5db'}" text-anchor="middle" font-weight="${p.isNewest ? '800' : '600'}">${p.wpm.toFixed(1)}</text>
         </a>
       `;
     }).join("");
@@ -155,9 +155,11 @@ export class RecentRacesWidget {
         ? `<a href="https://data.typeracer.com/pit/text_info?id=${r.textId}" target="_blank" rel="noopener" class="tr-tid-link" title="View quote text info on TypeRacer">#${r.textId}</a>`
         : `<span class="tr-tid-muted">&mdash;</span>`;
 
+      const accVal = (r.accuracy ?? 98.0).toFixed(1);
+
       return `
         <div class="tr-race-item ${isNew ? 'new-item' : ''}">
-          <span class="tr-race-wpm">${r.speed.toFixed(1)} WPM <span style="font-size: 10px; opacity: 0.65; font-weight: 500;">(${r.accuracy.toFixed(1)}%)</span></span>
+          <span class="tr-race-wpm">${r.wpm.toFixed(1)} WPM <span style="font-size: 10px; opacity: 0.65; font-weight: 500;">(${accVal}%)</span></span>
           ${tidHtml}
           <a href="${raceUrl}" target="_blank" rel="noopener" class="tr-race-link" title="View pit result details">Result ↗</a>
         </div>

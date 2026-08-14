@@ -251,6 +251,12 @@ class TypeRacerOverlayApp {
 
   private async refreshOverlayData(highlightNew = false): Promise<void> {
     const races = await this.quoteStore.getRecentRaces(200);
+    if (races.length > 0) {
+      this.quoteHistoryWidget.validateAgainstLatestRace(races[0].id);
+    } else {
+      this.quoteHistoryWidget.clear();
+    }
+
     this.recentRacesWidget.render(races, highlightNew, this.activeUsername);
 
     const streakInfo = this.streakTracker.calculateStreakInfo(races, this.isQotdDoneFromApi);

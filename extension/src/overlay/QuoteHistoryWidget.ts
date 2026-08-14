@@ -2,12 +2,17 @@ import type { ExtensionRace, QuoteHistoryRecord } from "../types";
 
 export class QuoteHistoryWidget {
   private container: HTMLElement;
+  private activeRaceId: string | null = null;
+  private activeType: "pre" | "post" | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
   }
 
   public renderPreRaceQuote(record: QuoteHistoryRecord | null, quoteText: string): void {
+    this.activeRaceId = null;
+    this.activeType = "pre";
+
     if (!quoteText) {
       this.container.innerHTML = "";
       return;
@@ -42,6 +47,9 @@ export class QuoteHistoryWidget {
   }
 
   public renderPostRaceDelta(newRace: ExtensionRace, previousRecord: QuoteHistoryRecord | null): void {
+    this.activeRaceId = newRace.id || null;
+    this.activeType = "post";
+
     if (!previousRecord || previousRecord.timesTyped === 0) {
       this.container.innerHTML = `
         <div class="tr-card">
@@ -78,7 +86,15 @@ export class QuoteHistoryWidget {
     `;
   }
 
+  public validateAgainstLatestRace(latestRaceId?: string): void {
+    if (this.activeType === "post" && this.activeRaceId && latestRaceId && this.activeRaceId !== latestRaceId) {
+      this.clear();
+    }
+  }
+
   public clear(): void {
+    this.activeRaceId = null;
+    this.activeType = null;
     this.container.innerHTML = "";
   }
 }

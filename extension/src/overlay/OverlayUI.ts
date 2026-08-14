@@ -18,6 +18,7 @@ export class OverlayUI {
     apiKey: "",
     themeMode: "auto",
     hideUpsells: true,
+    autoMinimizeOnRace: false,
     dimensions: { width: 340, height: 420 },
   };
 
@@ -52,6 +53,21 @@ export class OverlayUI {
 
   public setOnRefresh(cb: () => Promise<void> | void): void {
     this.onRefreshCallback = cb;
+  }
+
+  public setCollapsed(collapsed: boolean): void {
+    if (this.settings.collapsed === collapsed) return;
+    this.settings.collapsed = collapsed;
+    this.containerEl.classList.toggle("collapsed", collapsed);
+    const collapseBtn = this.shadowRoot.getElementById("tr-btn-collapse");
+    if (collapseBtn) {
+      collapseBtn.textContent = collapsed ? "＋" : "－";
+    }
+    this.saveSettings();
+  }
+
+  public isAutoMinimizeEnabled(): boolean {
+    return !!this.settings.autoMinimizeOnRace;
   }
 
   private loadSettings(): void {
@@ -166,7 +182,9 @@ export class OverlayUI {
           <span id="tr-header-title-container">${initialTitleHtml}</span>
         </div>
         <div class="tr-overlay-actions">
-          <button class="tr-icon-btn" id="tr-btn-refresh" title="Reload Stats & Sync Recent Races">↻</button>
+          <button class="tr-icon-btn" id="tr-btn-refresh" title="Reload Stats & Sync Recent Races">
+            <span class="tr-refresh-icon" id="tr-icon-refresh-glyph">↻</span>
+          </button>
           <button class="tr-icon-btn" id="tr-btn-theme" title="Theme Mode">${currentModeText}</button>
           <button class="tr-icon-btn" id="tr-btn-settings" title="Settings">⚙</button>
           <button class="tr-icon-btn" id="tr-btn-collapse" title="Collapse/Expand">
@@ -190,19 +208,22 @@ export class OverlayUI {
     this.racesWidgetEl = this.shadowRoot.getElementById("tr-races-widget")!;
     this.settingsWidgetEl = this.shadowRoot.getElementById("tr-settings-widget")!;
 
-    // Bind Refresh Button
+    // Bind Refresh Button (Animates only the glyph)
     const refreshBtn = this.shadowRoot.getElementById("tr-btn-refresh");
+    const refreshGlyph = this.shadowRoot.getElementById("tr-icon-refresh-glyph");
     if (refreshBtn) {
       refreshBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (this.onRefreshCallback) {
-          refreshBtn.classList.add("spinning");
+          if (refreshGlyph) refreshGlyph.classList.add("spinning");
           try {
             await this.onRefreshCallback();
           } catch (err) {
             console.warn("[TypeRacer Overlay] Manual refresh error:", err);
           } finally {
-            setTimeout(() => refreshBtn.classList.remove("spinning"), 400);
+            setTimeout(() => {
+              if (refreshGlyph) refreshGlyph.classList.remove("spinning");
+            }, 400);
           }
         }
       });
@@ -233,6 +254,7 @@ export class OverlayUI {
   private renderSettingsPanel(): void {
     const currentMode = this.settings.themeMode || "auto";
     const hideUpsells = this.settings.hideUpsells ?? true;
+    const autoMin = this.settings.autoMinimizeOnRace ?? false;
 
     this.settingsWidgetEl.innerHTML = `
       <div class="tr-card">
@@ -250,6 +272,14 @@ export class OverlayUI {
           <span>Hide Premium Upsells & Ads</span>
           <label class="tr-switch">
             <input type="checkbox" id="tr-set-upsells" ${hideUpsells ? "checked" : ""}>
+            <span class="tr-slider"></span>
+          </label>
+        </div>
+
+        <div class="tr-setting-row" style="margin-top: 6px;">
+          <span>Auto-Minimize During Race</span>
+          <label class="tr-switch">
+            <input type="checkbox" id="tr-set-autominimize" ${autoMin ? "checked" : ""}>
             <span class="tr-slider"></span>
           </label>
         </div>
@@ -292,6 +322,14 @@ export class OverlayUI {
     if (upsellsCheckbox) {
       upsellsCheckbox.addEventListener("change", () => {
         this.settings.hideUpsells = upsellsCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
+    const autoMinCheckbox = this.shadowRoot.getElementById("tr-set-autominimize") as HTMLInputElement;
+    if (autoMinCheckbox) {
+      autoMinCheckbox.addEventListener("change", () => {
+        this.settings.autoMinimizeOnRace = autoMinCheckbox.checked;
         this.saveSettings();
       });
     }

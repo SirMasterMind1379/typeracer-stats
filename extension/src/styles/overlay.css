@@ -135,10 +135,14 @@
   color: #ffffff;
 }
 
-.tr-icon-btn.spinning {
+.tr-refresh-icon {
+  display: inline-block;
+  line-height: 1;
+  transform-origin: center center;
+}
+
+.tr-refresh-icon.spinning {
   animation: trSpin 0.75s linear infinite;
-  pointer-events: none;
-  opacity: 0.7;
 }
 
 .tr-overlay-body {
@@ -267,17 +271,17 @@
 }
 
 .tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-track,
-.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-track {
+.tr-races-list::-webkit-scrollbar-track {
   background: #f5edd8;
 }
 
 .tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-thumb,
-.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-thumb {
+.tr-races-list::-webkit-scrollbar-thumb {
   background: #9e8d76;
 }
 
 .tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-thumb:hover,
-.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-thumb:hover {
+.tr-races-list::-webkit-scrollbar-thumb:hover {
   background: #800000;
 }
 

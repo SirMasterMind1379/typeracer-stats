@@ -41,6 +41,7 @@ export interface OverlaySettings {
   apiKey?: string;
   themeMode?: "auto" | "light" | "dark";
   hideUpsells?: boolean;
+  autoMinimizeOnRace?: boolean;
   dimensions?: { width: number; height: number };
 }
 

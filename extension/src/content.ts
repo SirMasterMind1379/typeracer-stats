@@ -206,6 +206,11 @@ class TypeRacerOverlayApp {
   }
 
   private async handleQuoteLoaded(textId: number, quoteText: string): Promise<void> {
+    // Auto-minimize during race if enabled
+    if (this.ui.isAutoMinimizeEnabled()) {
+      this.ui.setCollapsed(true);
+    }
+
     // Look up previous record for this text
     this.currentQuoteRecord = await this.quoteStore.getQuoteHistory(textId);
     this.quoteHistoryWidget.renderPreRaceQuote(this.currentQuoteRecord, quoteText);
@@ -213,6 +218,11 @@ class TypeRacerOverlayApp {
 
   private async handleRaceCompleted(race: ExtensionRace): Promise<void> {
     const username = this.activeUsername || "local_user";
+
+    // Auto-expand overlay on race completion if auto-minimize was active
+    if (this.ui.isAutoMinimizeEnabled()) {
+      this.ui.setCollapsed(false);
+    }
 
     // 1. Save completed race to QuoteStore
     await this.quoteStore.saveRace(race, username);
@@ -234,7 +244,7 @@ class TypeRacerOverlayApp {
         this.quoteStore.syncFromAPI(this.activeUsername).then(() => {
           this.refreshOverlayData();
         });
-      }, 1500);
+      }, 1200);
     }
   }
 }

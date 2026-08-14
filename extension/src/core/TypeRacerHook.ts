@@ -48,21 +48,17 @@ export class TypeRacerHook {
   }
 
   private initClickListeners(): void {
-    // Listen for user clicks on "Race Again", "Enter a typing race", "Practice", etc.
+    // Listen for user clicks on "Race Again", "Enter a Typing Race", "Play the Quote of the Day", "Practice Yourself", "Create Racetrack", etc.
+    const START_TRIGGER_REGEX = /race\s*again|enter\s*a\s*typing\s*race|quote\s*of\s*the\s*day|practice\s*yourself|create\s*racetrack|race\s*your\s*friends|join\s*race|\bpractice\b/i;
+
     document.addEventListener("click", (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      const btn = target.closest("button, a, div[role='button'], .gwt-Anchor");
+      const btn = target.closest("button, a, div[role='button'], .gwt-Anchor, [class*='bg-success'], [class*='bg-brand'], [class*='bg-warning']");
       if (btn && btn.textContent) {
-        const text = btn.textContent.trim().toLowerCase();
-        if (
-          text.includes("race again") ||
-          text.includes("enter a typing race") ||
-          text.includes("race your friends") ||
-          text.includes("practice") ||
-          text.includes("join race")
-        ) {
+        const text = btn.textContent.trim();
+        if (START_TRIGGER_REGEX.test(text)) {
           this.handleRaceStartCue();
         }
       }

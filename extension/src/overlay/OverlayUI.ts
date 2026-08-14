@@ -64,6 +64,8 @@ export class OverlayUI {
   }
 
   public setCollapsed(collapsed: boolean): void {
+    // Docked sidebars cannot be collapsed
+    if (this.settings.snapMode && this.settings.snapMode !== "none") return;
     if (this.settings.collapsed === collapsed) return;
     this.settings.collapsed = collapsed;
     this.containerEl.classList.toggle("collapsed", collapsed);
@@ -73,13 +75,6 @@ export class OverlayUI {
     }
     if (collapsed) {
       this.closeSettings();
-      this.clearBodyMargin();
-    } else {
-      if (this.settings.snapMode === "left-dock") {
-        this.applyBodyMargin("left", 360);
-      } else if (this.settings.snapMode === "right-dock") {
-        this.applyBodyMargin("right", 360);
-      }
     }
     this.saveSettings();
   }
@@ -230,8 +225,9 @@ export class OverlayUI {
     this.settings.snapMode = mode;
     const isSnapped = mode !== "none";
 
-    // Disable transparency when docked so stats are fully readable
+    // Disable transparency and ensure overlay is expanded when docked
     this.containerEl.classList.toggle("transparent", !isSnapped && !!this.settings.transparentOverlay);
+    this.containerEl.classList.remove("collapsed");
 
     if (mode === "left-dock") {
       this.containerEl.classList.remove("docked-right");
@@ -242,9 +238,7 @@ export class OverlayUI {
       this.containerEl.style.bottom = "0px";
       this.containerEl.style.width = "360px";
       this.containerEl.style.height = "100vh";
-      if (!this.settings.collapsed) {
-        this.applyBodyMargin("left", 360);
-      }
+      this.applyBodyMargin("left", 360);
     } else if (mode === "right-dock") {
       this.containerEl.classList.remove("docked-left");
       this.containerEl.classList.add("docked-right");
@@ -254,53 +248,7 @@ export class OverlayUI {
       this.containerEl.style.bottom = "0px";
       this.containerEl.style.width = "360px";
       this.containerEl.style.height = "100vh";
-      if (!this.settings.collapsed) {
-        this.applyBodyMargin("right", 360);
-      }
-    } else if (mode === "top-left") {
-      this.clearDockClasses();
-      this.clearBodyMargin();
-      this.containerEl.style.left = "8px";
-      this.containerEl.style.top = "8px";
-      this.containerEl.style.right = "auto";
-      this.containerEl.style.bottom = "auto";
-      this.containerEl.style.width = "340px";
-      this.containerEl.style.height = "calc(50vh - 16px)";
-      this.settings.position = { x: 8, y: 8 };
-    } else if (mode === "top-right") {
-      this.clearDockClasses();
-      this.clearBodyMargin();
-      const x = Math.max(10, window.innerWidth - 350);
-      this.containerEl.style.left = `${x}px`;
-      this.containerEl.style.top = "8px";
-      this.containerEl.style.right = "auto";
-      this.containerEl.style.bottom = "auto";
-      this.containerEl.style.width = "340px";
-      this.containerEl.style.height = "calc(50vh - 16px)";
-      this.settings.position = { x, y: 8 };
-    } else if (mode === "bottom-left") {
-      this.clearDockClasses();
-      this.clearBodyMargin();
-      const y = Math.max(10, Math.floor(window.innerHeight / 2) + 8);
-      this.containerEl.style.left = "8px";
-      this.containerEl.style.top = `${y}px`;
-      this.containerEl.style.right = "auto";
-      this.containerEl.style.bottom = "auto";
-      this.containerEl.style.width = "340px";
-      this.containerEl.style.height = "calc(50vh - 16px)";
-      this.settings.position = { x: 8, y };
-    } else if (mode === "bottom-right") {
-      this.clearDockClasses();
-      this.clearBodyMargin();
-      const x = Math.max(10, window.innerWidth - 350);
-      const y = Math.max(10, Math.floor(window.innerHeight / 2) + 8);
-      this.containerEl.style.left = `${x}px`;
-      this.containerEl.style.top = `${y}px`;
-      this.containerEl.style.right = "auto";
-      this.containerEl.style.bottom = "auto";
-      this.containerEl.style.width = "340px";
-      this.containerEl.style.height = "calc(50vh - 16px)";
-      this.settings.position = { x, y };
+      this.applyBodyMargin("right", 360);
     } else {
       this.clearDockClasses();
       this.clearBodyMargin();
@@ -308,7 +256,7 @@ export class OverlayUI {
       if (this.settings.dimensions?.width) {
         this.containerEl.style.width = `${this.settings.dimensions.width}px`;
       }
-      if (this.settings.dimensions?.height && !this.settings.collapsed) {
+      if (this.settings.dimensions?.height) {
         this.containerEl.style.height = `${this.settings.dimensions.height}px`;
       }
     }
@@ -475,7 +423,7 @@ export class OverlayUI {
         <!-- Window Snapping & Docking Master Setting -->
         <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
           <div class="tr-setting-row">
-            <span style="font-weight: 700; color: #ef4444;">Enable Window Snapping & Docking</span>
+            <span style="font-weight: 700; color: #ef4444;">Enable Side-Docking & Snapping</span>
             <label class="tr-switch">
               <input type="checkbox" id="tr-set-enablesnapping" ${enableSnapping ? "checked" : ""}>
               <span class="tr-slider"></span>
@@ -670,34 +618,16 @@ export class OverlayUI {
         return;
       }
 
-      // Determine Snapping Targets (Left, Right, Corners)
+      // Left & Right Side Snapping Only
       const isNearLeft = e.clientX < 50;
       const isNearRight = e.clientX > window.innerWidth - 50;
-      const isNearTop = e.clientY < 70;
-      const isNearBottom = e.clientY > window.innerHeight - 70;
 
       if (isNearLeft) {
-        if (isNearTop) {
-          currentSnapTarget = "top-left";
-          this.updateSnapPreview(8, 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
-        } else if (isNearBottom) {
-          currentSnapTarget = "bottom-left";
-          this.updateSnapPreview(8, Math.floor(window.innerHeight / 2) + 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
-        } else {
-          currentSnapTarget = "left-dock";
-          this.updateSnapPreview(0, 0, "auto", 0, 360, window.innerHeight);
-        }
+        currentSnapTarget = "left-dock";
+        this.updateSnapPreview(0, 0, "auto", 0, 360, window.innerHeight);
       } else if (isNearRight) {
-        if (isNearTop) {
-          currentSnapTarget = "top-right";
-          this.updateSnapPreview(window.innerWidth - 348, 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
-        } else if (isNearBottom) {
-          currentSnapTarget = "bottom-right";
-          this.updateSnapPreview(window.innerWidth - 348, Math.floor(window.innerHeight / 2) + 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
-        } else {
-          currentSnapTarget = "right-dock";
-          this.updateSnapPreview(window.innerWidth - 360, 0, "auto", 0, 360, window.innerHeight);
-        }
+        currentSnapTarget = "right-dock";
+        this.updateSnapPreview(window.innerWidth - 360, 0, "auto", 0, 360, window.innerHeight);
       } else {
         currentSnapTarget = "none";
         this.snapPreviewEl.classList.remove("visible");

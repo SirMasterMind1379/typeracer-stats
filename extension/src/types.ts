@@ -46,7 +46,7 @@ export interface OverlaySettings {
   autoHideTopBar?: boolean;
   transparentOverlay?: boolean;
   wideMode?: boolean;
-  snapMode?: "left-dock" | "right-dock" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "none";
+  snapMode?: "left-dock" | "right-dock" | "none";
   dimensions?: { width: number; height: number };
 }
 

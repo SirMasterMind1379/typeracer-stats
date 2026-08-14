@@ -87,6 +87,12 @@
   border-bottom: none !important;
 }
 
+/* Hide minimize/collapse button and corner resize handles when docked */
+.tr-overlay-container.docked-left #tr-btn-collapse,
+.tr-overlay-container.docked-right #tr-btn-collapse {
+  display: none !important;
+}
+
 /* Snapping Guide Ghost Preview Box */
 .tr-snap-preview {
   position: fixed;

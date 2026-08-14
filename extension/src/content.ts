@@ -252,8 +252,9 @@ class TypeRacerOverlayApp {
         styleEl = document.createElement("style");
         styleEl.id = "tr-hide-lobby-socials-style";
         styleEl.textContent = `
-          /* Hide Social Media Links inside the Main Typing Race Box / Lobby Card */
+          /* Hide Social Media Links & Containers inside Main Race Box / Lobby Card */
           .mainMenu a[href*="discord"],
+          .mainMenu a[href*="tiktok"],
           .mainMenu a[href*="twitter"],
           .mainMenu a[href*="facebook"],
           .mainMenu a[href*="youtube"],
@@ -261,27 +262,50 @@ class TypeRacerOverlayApp {
           .mainMenu a[href*="instagram"],
           .mainMenu div[class*="social"],
           .main-view a[href*="discord"],
+          .main-view a[href*="tiktok"],
           .main-view a[href*="twitter"],
           .main-view a[href*="facebook"],
           .main-view a[href*="youtube"],
           .main-view a[href*="reddit"],
           .main-view a[href*="instagram"],
+          div[class*="bg-card-background"] .flex.flex-row.gap-4:has(a[href*="discord"]),
+          div[class*="bg-card-background"] .flex.flex-row.gap-4:has(a[href*="tiktok"]),
+          div[class*="bg-card-background"] .flex.flex-row.gap-4:has(a[aria-label="TikTok"]),
+          div[class*="bg-card-background"] .flex.flex-row.gap-4:has(a[aria-label="Discord"]),
+          div[class*="border-card-border"] .flex.flex-row.gap-4:has(a[href*="discord"]),
+          div[class*="border-card-border"] .flex.flex-row.gap-4:has(a[href*="tiktok"]),
+          div[class*="bg-card-background"] a[href*="discord"],
+          div[class*="bg-card-background"] a[href*="tiktok"],
+          div[class*="bg-card-background"] a[href*="facebook"],
+          div[class*="bg-card-background"] a[href*="youtube"],
+          div[class*="bg-card-background"] a[href*="twitter"],
+          div[class*="bg-card-background"] a[href*="shockwavegames"],
+          div[class*="bg-card-background"] a[aria-label="Discord"],
+          div[class*="bg-card-background"] a[aria-label="TikTok"],
+          div[class*="bg-card-background"] a[aria-label="Facebook"],
+          div[class*="bg-card-background"] a[aria-label="YouTube"],
+          div[class*="bg-card-background"] a[aria-label="Twitter"],
           div[class*="card"] a[href*="discord.gg"],
+          div[class*="card"] a[href*="tiktok.com"],
           div[class*="card"] a[href*="twitter.com"],
           div[class*="card"] a[href*="facebook.com"],
           div[class*="card"] a[href*="youtube.com"],
           div[class*="card"] a[href*="reddit.com"],
           div[class*="card"] a[href*="instagram.com"],
           div[class*="rounded"] a[href*="discord.gg"],
+          div[class*="rounded"] a[href*="tiktok.com"],
           div[class*="rounded"] a[href*="twitter.com"],
-          div[class*="rounded"] a[href*="facebook.com"] {
+          div[class*="rounded"] a[href*="facebook.com"],
+          div[class*="rounded"] a[href*="youtube.com"] {
             display: none !important;
             visibility: hidden !important;
           }
 
           /* Explicitly preserve bottom footer socials intact */
           footer a,
-          div[class*="footer"] a {
+          footer a[href*="tiktok"],
+          div[class*="footer"] a,
+          div[class*="footer"] a[href*="tiktok"] {
             display: inline-flex !important;
             visibility: visible !important;
           }

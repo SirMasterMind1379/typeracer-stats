@@ -20,6 +20,7 @@ export class OverlayUI {
     apiKey: "",
     themeMode: "auto",
     hideUpsells: true,
+    hideLobbySocials: true,
     enableSnapping: true,
     autoMinimizeOnRace: false,
     autoHideTopBar: false,
@@ -28,7 +29,6 @@ export class OverlayUI {
     hideCursorWhileTyping: false,
     disableRacerPopupsDuringRace: false,
     compactLobbyButtons: false,
-    hideLobbySocials: true,
     snapMode: "none",
     dimensions: { width: 340, height: 420 },
   };
@@ -387,6 +387,7 @@ export class OverlayUI {
   private renderSettingsPanel(): void {
     const currentMode = this.settings.themeMode || "auto";
     const hideUpsells = this.settings.hideUpsells ?? true;
+    const hideSocials = this.settings.hideLobbySocials ?? true;
     const enableSnapping = this.settings.enableSnapping ?? true;
     const autoMin = this.settings.autoMinimizeOnRace ?? false;
     const autoTopBar = this.settings.autoHideTopBar ?? false;
@@ -395,7 +396,6 @@ export class OverlayUI {
     const hideCursor = this.settings.hideCursorWhileTyping ?? false;
     const blockPopups = this.settings.disableRacerPopupsDuringRace ?? false;
     const compactLobby = this.settings.compactLobbyButtons ?? false;
-    const hideSocials = this.settings.hideLobbySocials ?? true;
 
     this.settingsWidgetEl.innerHTML = `
       <div class="tr-card" style="margin-bottom: 0;">
@@ -420,6 +420,15 @@ export class OverlayUI {
           </label>
         </div>
 
+        <!-- Placed right after Hide Premium Upsells -->
+        <div class="tr-setting-row" style="margin-top: 6px;">
+          <span>Hide Social Links in Race Box</span>
+          <label class="tr-switch">
+            <input type="checkbox" id="tr-set-hidelobbysocials" ${hideSocials ? "checked" : ""}>
+            <span class="tr-slider"></span>
+          </label>
+        </div>
+
         <div class="tr-setting-row" style="margin-top: 6px;">
           <span>Auto-Hide Top Bar (Hover to Show)</span>
           <label class="tr-switch">
@@ -440,14 +449,6 @@ export class OverlayUI {
           <span>Side-by-Side QOTD & Race Lobby Cards</span>
           <label class="tr-switch">
             <input type="checkbox" id="tr-set-compactlobby" ${compactLobby ? "checked" : ""}>
-            <span class="tr-slider"></span>
-          </label>
-        </div>
-
-        <div class="tr-setting-row" style="margin-top: 6px;">
-          <span>Hide Social Links in Race Box</span>
-          <label class="tr-switch">
-            <input type="checkbox" id="tr-set-hidelobbysocials" ${hideSocials ? "checked" : ""}>
             <span class="tr-slider"></span>
           </label>
         </div>
@@ -545,6 +546,14 @@ export class OverlayUI {
       });
     }
 
+    const hideSocialsCheckbox = this.shadowRoot.getElementById("tr-set-hidelobbysocials") as HTMLInputElement;
+    if (hideSocialsCheckbox) {
+      hideSocialsCheckbox.addEventListener("change", () => {
+        this.settings.hideLobbySocials = hideSocialsCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
     const autoTopBarCheckbox = this.shadowRoot.getElementById("tr-set-autohidetopbar") as HTMLInputElement;
     if (autoTopBarCheckbox) {
       autoTopBarCheckbox.addEventListener("change", () => {
@@ -565,14 +574,6 @@ export class OverlayUI {
     if (compactLobbyCheckbox) {
       compactLobbyCheckbox.addEventListener("change", () => {
         this.settings.compactLobbyButtons = compactLobbyCheckbox.checked;
-        this.saveSettings();
-      });
-    }
-
-    const hideSocialsCheckbox = this.shadowRoot.getElementById("tr-set-hidelobbysocials") as HTMLInputElement;
-    if (hideSocialsCheckbox) {
-      hideSocialsCheckbox.addEventListener("change", () => {
-        this.settings.hideLobbySocials = hideSocialsCheckbox.checked;
         this.saveSettings();
       });
     }

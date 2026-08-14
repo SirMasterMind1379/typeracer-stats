@@ -25,6 +25,7 @@ class TypeRacerOverlayApp {
   private activeUsername: string = "";
   private isQotdDoneFromApi: boolean = false;
   private isRaceActive: boolean = false;
+  private lobbyObserver: MutationObserver | null = null;
 
   constructor() {
     this.quoteStore = new QuoteStore();
@@ -43,6 +44,8 @@ class TypeRacerOverlayApp {
       this.applyUpsellsCleaner(settings.hideUpsells ?? true);
       this.applyTopBarAutoHide(settings.autoHideTopBar ?? false);
       this.applyWideMode(settings.wideMode ?? false);
+      this.applyLobbySocialsCleaner(settings.hideLobbySocials ?? true);
+      this.applyCompactLobbyButtons(settings.compactLobbyButtons ?? false);
 
       if (!settings.disableRacerPopupsDuringRace && this.isRaceActive) {
         document.documentElement.classList.remove("tr-suppress-racer-popups");
@@ -68,8 +71,11 @@ class TypeRacerOverlayApp {
     this.applyUpsellsCleaner(initialSettings.hideUpsells ?? true);
     this.applyTopBarAutoHide(initialSettings.autoHideTopBar ?? false);
     this.applyWideMode(initialSettings.wideMode ?? false);
+    this.applyLobbySocialsCleaner(initialSettings.hideLobbySocials ?? true);
+    this.applyCompactLobbyButtons(initialSettings.compactLobbyButtons ?? false);
     this.initTypingCursorHider();
     this.initRacerTooltipSuppressor();
+    this.initLobbyObserver();
 
     // 4. Initialize Component Widgets
     this.quoteHistoryWidget = new QuoteHistoryWidget(this.ui.quoteWidgetEl);
@@ -166,6 +172,130 @@ class TypeRacerOverlayApp {
         }
       `;
       document.head.appendChild(style);
+    }
+  }
+
+  private initLobbyObserver(): void {
+    this.lobbyObserver = new MutationObserver(() => {
+      if (this.ui.getSettings().compactLobbyButtons) {
+        this.applyCompactLobbyButtons(true);
+      }
+    });
+
+    this.lobbyObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private applyLobbySocialsCleaner(hideSocials: boolean): void {
+    let styleEl = document.getElementById("tr-hide-lobby-socials-style");
+
+    if (hideSocials) {
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = "tr-hide-lobby-socials-style";
+        styleEl.textContent = `
+          /* Hide Social Media Links inside the Main Typing Race Box / Lobby Card */
+          .mainMenu a[href*="discord"],
+          .mainMenu a[href*="twitter"],
+          .mainMenu a[href*="facebook"],
+          .mainMenu a[href*="youtube"],
+          .mainMenu a[href*="reddit"],
+          .mainMenu a[href*="instagram"],
+          .mainMenu div[class*="social"],
+          .main-view a[href*="discord"],
+          .main-view a[href*="twitter"],
+          .main-view a[href*="facebook"],
+          .main-view a[href*="youtube"],
+          .main-view a[href*="reddit"],
+          .main-view a[href*="instagram"],
+          div[class*="card"] a[href*="discord.gg"],
+          div[class*="card"] a[href*="twitter.com"],
+          div[class*="card"] a[href*="facebook.com"],
+          div[class*="card"] a[href*="youtube.com"],
+          div[class*="card"] a[href*="reddit.com"],
+          div[class*="card"] a[href*="instagram.com"],
+          div[class*="rounded"] a[href*="discord.gg"],
+          div[class*="rounded"] a[href*="twitter.com"],
+          div[class*="rounded"] a[href*="facebook.com"] {
+            display: none !important;
+            visibility: hidden !important;
+          }
+
+          /* Explicitly preserve bottom footer socials intact */
+          footer a,
+          div[class*="footer"] a {
+            display: inline-flex !important;
+            visibility: visible !important;
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+    } else {
+      if (styleEl) {
+        styleEl.remove();
+      }
+    }
+  }
+
+  private applyCompactLobbyButtons(compact: boolean): void {
+    let styleEl = document.getElementById("tr-compact-lobby-style");
+
+    if (compact) {
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = "tr-compact-lobby-style";
+        styleEl.textContent = `
+          /* Side-by-Side Lobby & QOTD Action Buttons Styling */
+          #tr-side-by-side-lobby-row {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 12px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-wrap: wrap !important;
+            width: 100% !important;
+            margin: 8px 0 !important;
+          }
+          #tr-side-by-side-lobby-row > * {
+            flex: 1 1 220px !important;
+            max-width: 380px !important;
+            margin: 0 !important;
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+
+      // Re-parent QOTD button adjacent to Enter a Typing Race button
+      const allButtons = Array.from(document.querySelectorAll("button, a, div[role='button']"));
+      const enterRaceBtn = allButtons.find((b) => b.textContent && /enter\s*a\s*typing\s*race/i.test(b.textContent));
+      const qotdBtn = allButtons.find((b) => b.textContent && /quote\s*of\s*the\s*day/i.test(b.textContent));
+
+      if (enterRaceBtn && qotdBtn && enterRaceBtn.parentElement) {
+        const enterContainer = (enterRaceBtn.closest("div[class*='card'], .mainMenu, div[class*='rounded-lg']") || enterRaceBtn.parentElement) as HTMLElement;
+        const qotdContainer = (qotdBtn.closest("div[class*='card'], .mainMenu, div[class*='rounded-lg']") || qotdBtn.parentElement) as HTMLElement;
+
+        let row = document.getElementById("tr-side-by-side-lobby-row");
+        if (!row && enterRaceBtn.parentElement) {
+          row = document.createElement("div");
+          row.id = "tr-side-by-side-lobby-row";
+          enterRaceBtn.parentElement.insertBefore(row, enterRaceBtn);
+          row.appendChild(enterRaceBtn);
+          row.appendChild(qotdBtn);
+
+          // Hide empty leftover QOTD card container if separate
+          if (qotdContainer && qotdContainer !== enterContainer && !qotdContainer.contains(row)) {
+            if (qotdContainer.textContent?.trim() === "" || qotdContainer.children.length === 0) {
+              qotdContainer.style.display = "none";
+            }
+          }
+        }
+      }
+    } else {
+      if (styleEl) {
+        styleEl.remove();
+      }
     }
   }
 

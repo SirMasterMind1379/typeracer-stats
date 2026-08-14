@@ -11,10 +11,6 @@ export class StreakWidget {
     const pct = Math.min(100, Math.round((info.racesDoneToday / info.targetDaily) * 100));
     const isStreakDone = info.racesDoneToday >= info.targetDaily;
 
-    const streakMsg = isStreakDone
-      ? `🔥 Daily streak complete! (<strong>${info.racesDoneToday}</strong>/10 races finished today)`
-      : `🎯 <strong>${info.racesRemaining}</strong> more race${info.racesRemaining > 1 ? "s" : ""} to complete daily streak!`;
-
     const valClass = isStreakDone ? "tr-streak-val complete" : "tr-streak-val";
     const fillClass = isStreakDone ? "tr-progress-fill complete" : "tr-progress-fill";
 
@@ -34,8 +30,6 @@ export class StreakWidget {
         <div class="tr-progress-bg">
           <div class="${fillClass}" style="width: ${pct}%;"></div>
         </div>
-
-        <div class="tr-streak-msg">${streakMsg}</div>
 
         <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: 8px; padding-top: 8px;">
           <div class="tr-status-row">

@@ -271,17 +271,17 @@
 }
 
 .tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-track,
-.tr-races-list::-webkit-scrollbar-track {
+.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-track {
   background: #f5edd8;
 }
 
 .tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-thumb,
-.tr-races-list::-webkit-scrollbar-thumb {
+.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-thumb {
   background: #9e8d76;
 }
 
 .tr-overlay-container.light .tr-overlay-body::-webkit-scrollbar-thumb:hover,
-.tr-races-list::-webkit-scrollbar-thumb:hover {
+.tr-overlay-container.light .tr-races-list::-webkit-scrollbar-thumb:hover {
   background: #800000;
 }
 
@@ -483,7 +483,7 @@
 }
 
 .tr-sparkline-box {
-  height: 60px;
+  height: 105px;
   width: 100%;
   margin-top: 6px;
 }

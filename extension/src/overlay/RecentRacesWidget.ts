@@ -47,30 +47,88 @@ export class RecentRacesWidget {
 
     // Chronological order for left-to-right line chart progression (Oldest -> Newest)
     const chronological = [...recent10].reverse();
+    const n = chronological.length;
 
-    // Calculate line chart min/max
+    // Calculate line chart dynamic min/max with padding for vertical expansion
     const wpms = recent10.map((r) => r.speed);
-    const maxWpm = Math.max(...wpms, 120);
-    const minWpm = Math.max(0, Math.min(...wpms) - 10);
+    const rawMax = Math.max(...wpms);
+    const rawMin = Math.min(...wpms);
+    const span = rawMax - rawMin;
+    const margin = Math.max(3, Math.round(span * 0.16));
+    const maxWpm = rawMax + margin;
+    const minWpm = Math.max(0, rawMin - margin);
     const avgWpmVal = (wpms.reduce((a, b) => a + b, 0) / wpms.length).toFixed(1);
 
-    // SVG Line Chart Dimensions
+    // SVG Line Chart Dimensions (Vertically expanded)
     const svgWidth = 280;
-    const svgHeight = 60;
-    const paddingX = 14;
-    const paddingY = 16;
+    const svgHeight = 105;
+    const paddingX = 16;
+    const paddingY = 18;
     const chartW = svgWidth - 2 * paddingX;
     const chartH = svgHeight - 2 * paddingY;
 
+    // Linear Regression Trendline (Slope & Intercept)
+    let sumX = 0;
+    let sumY = 0;
+    let sumXY = 0;
+    let sumXX = 0;
+    for (let i = 0; i < n; i++) {
+      const x = i;
+      const y = chronological[i].speed;
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumXX += x * x;
+    }
+
+    const slope = n > 1 ? (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX || 1) : 0;
+    const intercept = n > 1 ? (sumY - slope * sumX) / n : (wpms[0] || 0);
+
+    const isTrendingUp = slope > 0.05;
+    const isTrendingDown = slope < -0.05;
+    const trendColor = isTrendingUp ? "#22c55e" : isTrendingDown ? "#f97316" : "#9ca3af";
+    const netTrendChange = (slope * (n - 1)).toFixed(1);
+    const trendBadgeHtml = n > 1
+      ? isTrendingUp
+        ? `<span style="color: #22c55e; font-size: 10px; font-weight: 700; margin-left: 6px;" title="Trendline: +${netTrendChange} WPM">▲ +${netTrendChange}</span>`
+        : isTrendingDown
+          ? `<span style="color: #f97316; font-size: 10px; font-weight: 700; margin-left: 6px;" title="Trendline: ${netTrendChange} WPM">▼ ${netTrendChange}</span>`
+          : `<span style="color: #9ca3af; font-size: 10px; font-weight: 600; margin-left: 6px;" title="Trendline: Flat">― Flat</span>`
+      : "";
+
     // Calculate (x, y) coordinates for polyline
     const points = chronological.map((r, i) => {
-      const stepX = chronological.length > 1 ? chartW / (chronological.length - 1) : chartW / 2;
+      const stepX = n > 1 ? chartW / (n - 1) : chartW / 2;
       const x = paddingX + i * stepX;
-      const heightPercent = Math.max(0.05, (r.speed - minWpm) / (maxWpm - minWpm || 1));
+      const heightPercent = Math.max(0.02, Math.min(0.98, (r.speed - minWpm) / (maxWpm - minWpm || 1)));
       const y = paddingY + (1 - heightPercent) * chartH;
       const url = this.buildTypeRacerResultUrl(r, username);
-      return { x, y, speed: r.speed, accuracy: r.accuracy, url, isNewest: i === chronological.length - 1 };
+      return { x, y, speed: r.speed, accuracy: r.accuracy, url, isNewest: i === n - 1 };
     });
+
+    // Trendline Coordinates
+    const trendStartSpeed = intercept;
+    const trendEndSpeed = slope * (n - 1) + intercept;
+    const trendPct0 = Math.max(0, Math.min(1, (trendStartSpeed - minWpm) / (maxWpm - minWpm || 1)));
+    const trendPct1 = Math.max(0, Math.min(1, (trendEndSpeed - minWpm) / (maxWpm - minWpm || 1)));
+    const trendY0 = paddingY + (1 - trendPct0) * chartH;
+    const trendY1 = paddingY + (1 - trendPct1) * chartH;
+    const trendX0 = points[0]?.x ?? paddingX;
+    const trendX1 = points[points.length - 1]?.x ?? (svgWidth - paddingX);
+
+    const trendlineSvg = n > 1 ? `
+      <!-- Trendline (Green = Up, Orange = Down) -->
+      <line x1="${trendX0.toFixed(1)}" y1="${trendY0.toFixed(1)}"
+            x2="${trendX1.toFixed(1)}" y2="${trendY1.toFixed(1)}"
+            stroke="${trendColor}" stroke-width="2" stroke-dasharray="5,3" opacity="0.85" />
+    ` : "";
+
+    // Average horizontal reference line
+    const avgPct = Math.max(0, Math.min(1, (Number(avgWpmVal) - minWpm) / (maxWpm - minWpm || 1)));
+    const avgY = paddingY + (1 - avgPct) * chartH;
+    const avgGridlineSvg = `
+      <line x1="${paddingX}" y1="${avgY.toFixed(1)}" x2="${svgWidth - paddingX}" y2="${avgY.toFixed(1)}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="2,2" />
+    `;
 
     // Build SVG Path Strings
     const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
@@ -83,7 +141,7 @@ export class RecentRacesWidget {
       return `
         <a href="${p.url}" target="_blank" rel="noopener" class="tr-point-group">
           <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${circleR}" fill="${p.isNewest ? '#ffffff' : '#ef4444'}" stroke="#9e1b24" stroke-width="${strokeW}" />
-          <text x="${p.x.toFixed(1)}" y="${(p.y - 6).toFixed(1)}" font-size="8" fill="${p.isNewest ? '#ffffff' : '#d1d5db'}" text-anchor="middle" font-weight="${p.isNewest ? '800' : '600'}">${p.speed.toFixed(1)}</text>
+          <text x="${p.x.toFixed(1)}" y="${(p.y - 6).toFixed(1)}" font-size="8.5" fill="${p.isNewest ? '#ffffff' : '#d1d5db'}" text-anchor="middle" font-weight="${p.isNewest ? '800' : '600'}">${p.speed.toFixed(1)}</text>
         </a>
       `;
     }).join("");
@@ -109,7 +167,7 @@ export class RecentRacesWidget {
     this.container.innerHTML = `
       <div class="tr-card">
         <div class="tr-card-title">
-          <span>Multiplayer Progression</span>
+          <span>Multiplayer Progression ${trendBadgeHtml}</span>
           <span style="color: #ef4444; font-weight: 700;">Avg: ${avgWpmVal} WPM</span>
         </div>
 
@@ -117,16 +175,22 @@ export class RecentRacesWidget {
           <svg class="tr-sparkline-svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
             <defs>
               <linearGradient id="trLineGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.4" />
+                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.35" />
                 <stop offset="100%" stop-color="#ef4444" stop-opacity="0.0" />
               </linearGradient>
             </defs>
 
+            <!-- Background Gridline -->
+            ${avgGridlineSvg}
+
             <!-- Line Area Fill -->
             <path d="${areaD}" fill="url(#trLineGrad)" />
 
+            <!-- Trendline -->
+            ${trendlineSvg}
+
             <!-- Polyline Path -->
-            <path d="${pathD}" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" />
+            <path d="${pathD}" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" />
 
             <!-- Point Dots & Speed Labels -->
             ${circlesSvg}

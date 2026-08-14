@@ -67,3 +67,18 @@ export function formatDisplayDate(dateStr: string): string {
   const yyyy = d.getFullYear();
   return `${mo}/${dd}/${yyyy}`;
 }
+
+export function parseApiRace(r: any): ExtensionRace {
+  return {
+    id: String(r.rid),
+    date: r.t ? (typeof r.t === "number" ? new Date(r.t * 1000).toISOString() : String(r.t)) : new Date().toISOString(),
+    speed: Number(Number(r.wpm).toFixed(1)),
+    accuracy: r.acc != null ? Number((r.acc * (r.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
+    points: r.pts != null ? Number(r.pts) : null,
+    rank: r.r || 1,
+    totalRacers: r.nr || 1,
+    textId: r.tid || 0,
+    won: r.r === 1,
+    mode: r.gn || r.mode || "multiplayer",
+  };
+}

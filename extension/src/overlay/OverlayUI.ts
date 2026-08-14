@@ -22,6 +22,7 @@ export class OverlayUI {
   };
 
   private onSettingsChangeCallback: (settings: OverlaySettings) => void;
+  private onRefreshCallback?: () => Promise<void> | void;
 
   constructor(cssContent: string, onSettingsChange: (settings: OverlaySettings) => void) {
     this.onSettingsChangeCallback = onSettingsChange;
@@ -47,6 +48,10 @@ export class OverlayUI {
     this.initBorderResize();
     this.initResizeObserver();
     this.initSystemThemeListener();
+  }
+
+  public setOnRefresh(cb: () => Promise<void> | void): void {
+    this.onRefreshCallback = cb;
   }
 
   private loadSettings(): void {
@@ -161,6 +166,7 @@ export class OverlayUI {
           <span id="tr-header-title-container">${initialTitleHtml}</span>
         </div>
         <div class="tr-overlay-actions">
+          <button class="tr-icon-btn" id="tr-btn-refresh" title="Reload Stats & Sync Recent Races">↻</button>
           <button class="tr-icon-btn" id="tr-btn-theme" title="Theme Mode">${currentModeText}</button>
           <button class="tr-icon-btn" id="tr-btn-settings" title="Settings">⚙</button>
           <button class="tr-icon-btn" id="tr-btn-collapse" title="Collapse/Expand">
@@ -183,6 +189,24 @@ export class OverlayUI {
     this.streakWidgetEl = this.shadowRoot.getElementById("tr-streak-widget")!;
     this.racesWidgetEl = this.shadowRoot.getElementById("tr-races-widget")!;
     this.settingsWidgetEl = this.shadowRoot.getElementById("tr-settings-widget")!;
+
+    // Bind Refresh Button
+    const refreshBtn = this.shadowRoot.getElementById("tr-btn-refresh");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (this.onRefreshCallback) {
+          refreshBtn.classList.add("spinning");
+          try {
+            await this.onRefreshCallback();
+          } catch (err) {
+            console.warn("[TypeRacer Overlay] Manual refresh error:", err);
+          } finally {
+            setTimeout(() => refreshBtn.classList.remove("spinning"), 400);
+          }
+        }
+      });
+    }
 
     // Bind Header Buttons
     const themeBtn = this.shadowRoot.getElementById("tr-btn-theme")!;

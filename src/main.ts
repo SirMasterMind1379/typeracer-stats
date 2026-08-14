@@ -312,30 +312,50 @@ class App {
       const key = this.selectedMetric === "speed" ? "speed" : "accuracy";
       const values = rollingData.map((d) => d[key]);
       const n = values.length;
-      const indices = values.map((_, i) => i);
-      const sumX = indices.reduce((a, b) => a + b, 0);
-      const sumY = values.reduce((a, b) => a + b, 0);
-      const sumXY = indices.reduce((s, i) => s + i * values[i], 0);
-      const sumX2 = indices.reduce((s, i) => s + i * i, 0);
-      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-      const intercept = (sumY - slope * sumX) / n;
-      regression = {
-        slope,
-        intercept,
-        line: values.map((_, i) => +(intercept + slope * i).toFixed(1)),
-      };
+      const sumX = (n * (n - 1)) / 2;
+      const sumX2 = ((n - 1) * n * (2 * n - 1)) / 6;
+      let sumY = 0;
+      let sumXY = 0;
+      for (let i = 0; i < n; i++) {
+        const v = values[i];
+        sumY += v;
+        sumXY += i * v;
+      }
+      const denom = n * sumX2 - sumX * sumX;
+      if (denom !== 0) {
+        const slope = (n * sumXY - sumX * sumY) / denom;
+        const intercept = (sumY - slope * sumX) / n;
+        regression = {
+          slope,
+          intercept,
+          line: values.map((_, i) => +(intercept + slope * i).toFixed(1)),
+        };
+      }
     }
 
-    const timeframeStats: TimeframeStats | null = filteredData.length
-      ? {
-          races: filteredData.length,
-          avgSpeed: (filteredData.reduce((s, r) => s + r.speed, 0) / filteredData.length).toFixed(1),
-          avgAcc: (filteredData.reduce((s, r) => s + r.accuracy, 0) / filteredData.length).toFixed(1),
-          wins: filteredData.filter((r) => r.won).length,
-          totalPoints: filteredData.reduce((s, r) => s + (r.points || 0), 0).toFixed(0),
-          winRate: ((filteredData.filter((r) => r.won).length / filteredData.length) * 100).toFixed(1),
-        }
-      : null;
+    let timeframeStats: TimeframeStats | null = null;
+    if (filteredData.length > 0) {
+      let speedSum = 0;
+      let accSum = 0;
+      let winsCount = 0;
+      let pointsSum = 0;
+      const totalRaces = filteredData.length;
+      for (let i = 0; i < totalRaces; i++) {
+        const r = filteredData[i];
+        speedSum += r.speed;
+        accSum += r.accuracy;
+        if (r.won) winsCount++;
+        pointsSum += r.points || 0;
+      }
+      timeframeStats = {
+        races: totalRaces,
+        avgSpeed: (speedSum / totalRaces).toFixed(1),
+        avgAcc: (accSum / totalRaces).toFixed(1),
+        wins: winsCount,
+        totalPoints: pointsSum.toFixed(0),
+        winRate: ((winsCount / totalRaces) * 100).toFixed(1),
+      };
+    }
 
     return { useDateLabels, rollingData, regression, timeframeStats };
   }

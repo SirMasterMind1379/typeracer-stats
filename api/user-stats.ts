@@ -187,17 +187,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const [racerRes, statsRes, batch1Res] = await Promise.all([
+    const [racerRes, statsRes, batch1Res, scrapeData] = await Promise.all([
       fetchFromTR(`/v1/racers/${username}?universe=play`, effectiveUsername, effectiveKey),
       fetchFromTR(`/v1/racers/${username}/stats?universe=play`, effectiveUsername, effectiveKey),
       fetchFromTR(`/v1/racers/${username}/races?universe=play&n=1000`, effectiveUsername, effectiveKey),
+      scrapeProfile(username),
     ]);
 
     if (!racerRes.success && (racerRes.status === 401 || racerRes.error?.includes("401"))) {
       if (apiKey || apiUsername) {
         return res.status(401).json({ error: "Invalid API key. Please check your credentials." });
       }
-      const profile = await scrapeProfile(username);
+      const profile = scrapeData || (await scrapeProfile(username));
       if (!profile) {
         return res.status(404).json({ error: "User not found. Please check the username." });
       }
@@ -249,12 +250,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         mode: r.mode || r.gn || r.game_mode || (r.nr <= 1 ? "practice" : "multiplayer"),
       }));
 
-    const totalRaces = apiStats?.total_races ?? apiStats?.totalRaces ?? races.length ?? 0;
-    const totalWins = apiStats?.total_wins ?? apiStats?.totalWins;
+    let totalRaces = apiStats?.total_races ?? apiStats?.totalRaces ?? apiStats?.numRaces ?? apiStats?.num_races ?? null;
+    let totalWins = apiStats?.total_wins ?? apiStats?.totalWins ?? apiStats?.num_wins ?? apiStats?.numWins ?? null;
     const statsPoints = apiStats?.points ?? null;
-    const avgWpm = apiStats?.avg_wpm ?? apiStats?.avgWpm;
-    const bestWpm = apiStats?.best_wpm ?? apiStats?.bestWpm;
+    let avgWpm = apiStats?.avg_wpm ?? apiStats?.avgWpm ?? apiStats?.wpm_average ?? apiStats?.averageWpm ?? null;
+    let bestWpm = apiStats?.best_wpm ?? apiStats?.bestWpm ?? apiStats?.wpm_best ?? apiStats?.bestRaceWpm ?? null;
     const certWpm = apiStats?.cert_wpm ?? apiStats?.certWpm ?? null;
+
+    // Fallback: fill missing stats from scrape, then from fetched races
+    if (scrapeData?.stats) {
+      const sc = scrapeData.stats;
+      if ((totalRaces == null || totalRaces === 0) && sc.totalRaces > 0) totalRaces = sc.totalRaces;
+      if ((avgWpm == null || avgWpm === 0) && sc.avgWpm != null) avgWpm = sc.avgWpm;
+      if ((bestWpm == null || bestWpm === 0) && sc.bestWpm != null) bestWpm = sc.bestWpm;
+    }
+    if (races.length > 0) {
+      if (totalRaces == null || totalRaces === 0) totalRaces = races.length;
+      if (avgWpm == null || avgWpm === 0) {
+        const sum = races.reduce((s: number, r: any) => s + (r.speed || 0), 0);
+        avgWpm = parseFloat((sum / races.length).toFixed(2));
+      }
+      if (bestWpm == null || bestWpm === 0) {
+        bestWpm = Math.max(...races.map((r: any) => r.speed || 0));
+      }
+      if (totalWins == null) {
+        totalWins = races.filter((r: any) => r.won).length;
+      }
+    }
 
     // QOTD Status: Check if a QOTD race or competition result occurred AFTER current QOTD day start (00:00 UTC)
     const now = new Date();
@@ -269,10 +291,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       username,
-      name: racer?.name || username,
+      name: racer?.name || scrapeData?.name || username,
       joinedAt: racer?.joined_at || null,
-      premium: racer?.premium || false,
-      badges: racer?.badges || [],
+      premium: racer?.premium ?? scrapeData?.premium ?? false,
+      badges: racer?.badges || scrapeData?.badges || [],
       stats: {
         totalRaces: totalRaces ?? races.length ?? 0,
         totalWins: totalWins ?? races.filter((r: any) => r.won).length ?? 0,

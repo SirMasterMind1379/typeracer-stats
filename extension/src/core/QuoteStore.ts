@@ -1,4 +1,5 @@
 import type { ExtensionRace, QuoteHistoryRecord } from "../types";
+import { parseApiRace } from "../types";
 
 const DB_NAME = "typeracer_db";
 const DB_VERSION = 1;
@@ -80,18 +81,7 @@ export class QuoteStore {
         });
         const rawRaces = JSON.parse(jsonText);
         if (Array.isArray(rawRaces)) {
-          const races: ExtensionRace[] = rawRaces.map((r: any) => ({
-            id: String(r.rid),
-            date: r.t ? (typeof r.t === 'number' ? new Date(r.t * 1000).toISOString() : String(r.t)) : new Date().toISOString(),
-            speed: Math.round(Number(r.wpm)),
-            accuracy: r.acc != null ? Number((r.acc * (r.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
-            points: r.pts != null ? Number(r.pts) : null,
-            rank: r.r || 1,
-            totalRacers: r.nr || 1,
-            textId: r.tid || 0,
-            won: r.r === 1,
-            mode: r.gn || r.mode || "multiplayer",
-          }));
+          const races: ExtensionRace[] = rawRaces.map(parseApiRace);
           if (races.length > 0) {
             this.recentRacesMemory = races;
             for (const r of races) await this.saveRace(r, username);
@@ -109,18 +99,7 @@ export class QuoteStore {
       if (res.ok) {
         const json = await res.json();
         const rawRaces = Array.isArray(json) ? json : [];
-        const races: ExtensionRace[] = rawRaces.map((r: any) => ({
-          id: String(r.rid),
-          date: r.t ? (typeof r.t === 'number' ? new Date(r.t * 1000).toISOString() : String(r.t)) : new Date().toISOString(),
-          speed: Math.round(Number(r.wpm)),
-          accuracy: r.acc != null ? Number((r.acc * (r.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
-          points: r.pts != null ? Number(r.pts) : null,
-          rank: r.r || 1,
-          totalRacers: r.nr || 1,
-          textId: r.tid || 0,
-          won: r.r === 1,
-          mode: r.gn || r.mode || "multiplayer",
-        }));
+        const races: ExtensionRace[] = rawRaces.map(parseApiRace);
 
         if (races.length > 0) {
           this.recentRacesMemory = races;

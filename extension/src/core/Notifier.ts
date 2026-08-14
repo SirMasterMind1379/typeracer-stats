@@ -1,6 +1,4 @@
 export class Notifier {
-  private hasNotifiedToday = false;
-
   public async requestPermission(): Promise<boolean> {
     if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
       try {

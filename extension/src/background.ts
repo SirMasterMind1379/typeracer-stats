@@ -1,4 +1,5 @@
 // Chrome Extension Background Service Worker (Manifest V3)
+import { parseApiRace } from "./types";
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("[TypeRacer Overlay] Service Worker installed.");
@@ -57,18 +58,7 @@ async function fetchRacesForUser(username: string): Promise<any[]> {
       const json = await apiRes.json();
       const rawList = Array.isArray(json) ? json : [];
       if (rawList.length > 0) {
-        return rawList.map((r: any) => ({
-          id: String(r.rid),
-          date: r.t ? (typeof r.t === "number" ? new Date(r.t * 1000).toISOString() : String(r.t)) : new Date().toISOString(),
-          speed: Math.round(Number(r.wpm)),
-          accuracy: r.acc != null ? Number((r.acc * (r.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
-          points: r.pts != null ? Number(r.pts) : null,
-          rank: r.r || 1,
-          totalRacers: r.nr || 1,
-          textId: r.tid || 0,
-          won: r.r === 1,
-          mode: r.gn || r.mode || "multiplayer",
-        }));
+        return rawList.map(parseApiRace);
       }
     }
   } catch (err) {

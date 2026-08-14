@@ -46,28 +46,38 @@ class TypeRacerOverlayApp {
       }
     });
 
-    // 2. Apply Upsells Cleaner on startup for all subdomains
+    // 2. Wire Manual Refresh/Reload Button Handler
+    this.ui.setOnRefresh(async () => {
+      const user = this.activeUsername || this.ui.getSettings().username;
+      if (user) {
+        await this.quoteStore.syncFromAPI(user);
+        this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(user);
+      }
+      await this.refreshOverlayData(true);
+    });
+
+    // 3. Apply Upsells Cleaner on startup for all subdomains
     const initialSettings = this.ui.getSettings();
     this.applyUpsellsCleaner(initialSettings.hideUpsells ?? true);
 
-    // 3. Initialize Component Widgets
+    // 4. Initialize Component Widgets
     this.quoteHistoryWidget = new QuoteHistoryWidget(this.ui.quoteWidgetEl);
     this.streakWidget = new StreakWidget(this.ui.streakWidgetEl);
     this.recentRacesWidget = new RecentRacesWidget(this.ui.racesWidgetEl);
 
-    // 4. Request Notification Permission if setting enabled
+    // 5. Request Notification Permission if setting enabled
     if (this.ui.getSettings().notifyOneHourBefore) {
       this.notifier.requestPermission();
     }
 
-    // 5. Attach TypeRacer Hook for DOM / Network Intercepts & Username Detection
+    // 6. Attach TypeRacer Hook for DOM / Network Intercepts & Username Detection
     this.trHook = new TypeRacerHook({
       onQuoteLoaded: (textId, quoteText) => this.handleQuoteLoaded(textId, quoteText),
       onRaceCompleted: (race) => this.handleRaceCompleted(race),
       onUsernameDetected: (user) => this.handleUsernameChanged(user),
     });
 
-    // 6. Detect Username from DOM / Cookies / Settings
+    // 7. Detect Username from DOM / Cookies / Settings
     const settingsUsername = this.ui.getSettings().username;
     const domUsername = this.trHook.detectUsername();
     const effectiveUsername = domUsername || settingsUsername || "";
@@ -78,8 +88,17 @@ class TypeRacerOverlayApp {
       await this.refreshOverlayData();
     }
 
-    // 7. Start Countdown Timer Interval (Updates timer live every 1 second)
+    // 8. Start Countdown Timer Interval (Updates timer live every 1 second)
     this.startCountdownTimer();
+
+    // 9. Window Focus / Visibility change auto-refresh
+    window.addEventListener("focus", () => {
+      if (this.activeUsername) {
+        this.quoteStore.syncFromAPI(this.activeUsername).then(() => {
+          this.refreshOverlayData();
+        });
+      }
+    });
 
     console.log("[TypeRacer Overlay] Initialized successfully on *.typeracer.com!");
   }
@@ -92,7 +111,7 @@ class TypeRacerOverlayApp {
         styleEl = document.createElement("style");
         styleEl.id = "tr-clean-upsells-style";
         styleEl.textContent = `
-          /* TypeRacer Premium Upsell & Ad Element Cleaner */
+          /* TypeRacer Premium Upsell, Ad & Account Upgrade Modal Overlay Cleaner */
           .premiumBanner,
           .sidebarAd,
           .ad-container,
@@ -115,7 +134,10 @@ class TypeRacerOverlayApp {
           .rankTable-upsell,
           .profileTableHeader__premium,
           .profileTable__row--upsell,
-          .b-premium-upsell {
+          .b-premium-upsell,
+          .pt-16.justify-center.items-start.bg-black\\/50.flex.z-50.inset-0.fixed,
+          .fixed.inset-0.z-50.flex.bg-black\\/50.items-start.justify-center.pt-16,
+          div[class*="fixed"][class*="inset-0"][class*="z-50"][class*="bg-black/50"] {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;

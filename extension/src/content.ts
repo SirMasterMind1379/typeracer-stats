@@ -207,10 +207,14 @@ class TypeRacerOverlayApp {
   }
 
   private handleRaceStarted(): void {
-    // Auto-minimize during race if enabled
+    // 1. Auto-minimize during race if enabled
     if (this.ui.isAutoMinimizeEnabled()) {
       this.ui.setCollapsed(true);
     }
+
+    // 2. Clear old post-race quote comparison banner when starting next race
+    this.quoteHistoryWidget.clear();
+    this.currentQuoteRecord = null;
   }
 
   private async handleQuoteLoaded(textId: number, quoteText: string): Promise<void> {

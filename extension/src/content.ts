@@ -164,13 +164,26 @@ class TypeRacerOverlayApp {
           box-sizing: border-box !important;
         }
 
+        /* Center content nicely without forcing wide mode expansion */
         html.tr-docked-left .max-w-4xl,
         html.tr-docked-left div[class*="max-w-4xl"],
         html.tr-docked-right .max-w-4xl,
         html.tr-docked-right div[class*="max-w-4xl"] {
-          max-width: calc(100vw - var(--tr-dock-width, 360px) - 24px) !important;
-          width: calc(100vw - var(--tr-dock-width, 360px) - 24px) !important;
+          max-width: min(56rem, calc(100vw - var(--tr-dock-width, 360px) - 24px)) !important;
+          width: 100% !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
           box-sizing: border-box !important;
+        }
+
+        html.tr-docked-left .xl\\:mr-80,
+        html.tr-docked-left div[class*="xl:mr-80"],
+        html.tr-docked-left div[class*="xl:ml-auto"],
+        html.tr-docked-right .xl\\:mr-80,
+        html.tr-docked-right div[class*="xl:mr-80"],
+        html.tr-docked-right div[class*="xl:ml-auto"] {
+          margin-right: auto !important;
+          margin-left: auto !important;
         }
       `;
       document.head.appendChild(style);
@@ -520,8 +533,8 @@ class TypeRacerOverlayApp {
           .main-content,
           .racetrackContainer,
           .main-view {
-            max-width: 95vw !important;
-            width: 95vw !important;
+            max-width: calc(100vw - var(--tr-dock-width, 0px) - 24px) !important;
+            width: calc(100vw - var(--tr-dock-width, 0px) - 24px) !important;
             margin-left: auto !important;
             margin-right: auto !important;
           }

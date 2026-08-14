@@ -4,6 +4,8 @@ export class OverlayUI {
   private hostEl: HTMLElement;
   private shadowRoot: ShadowRoot;
   private containerEl!: HTMLElement;
+  private snapPreviewEl!: HTMLElement;
+
   public quoteWidgetEl!: HTMLElement;
   public streakWidgetEl!: HTMLElement;
   public racesWidgetEl!: HTMLElement;
@@ -22,6 +24,7 @@ export class OverlayUI {
     autoHideTopBar: false,
     transparentOverlay: false,
     wideMode: false,
+    snapMode: "none",
     dimensions: { width: 340, height: 420 },
   };
 
@@ -45,9 +48,10 @@ export class OverlayUI {
     styleEl.textContent = cssContent;
     this.shadowRoot.appendChild(styleEl);
 
-    // Build DOM structure & apply theme
+    // Build DOM structure & apply theme / snap
     this.buildUI();
     this.applyTheme();
+    this.applyInitialPositionAndSnap();
     this.initDrag();
     this.initBorderResize();
     this.initResizeObserver();
@@ -68,6 +72,13 @@ export class OverlayUI {
     }
     if (collapsed) {
       this.closeSettings();
+      this.clearBodyMargin();
+    } else {
+      if (this.settings.snapMode === "left-dock") {
+        this.applyBodyMargin("left", 360);
+      } else if (this.settings.snapMode === "right-dock") {
+        this.applyBodyMargin("right", 360);
+      }
     }
     this.saveSettings();
   }
@@ -171,6 +182,128 @@ export class OverlayUI {
     this.shadowRoot.getElementById("tr-btn-settings")?.classList.remove("active");
   }
 
+  private applyInitialPositionAndSnap(): void {
+    const snap = this.settings.snapMode || "none";
+    if (snap !== "none") {
+      this.applySnap(snap);
+    } else {
+      if (this.settings.position) {
+        this.containerEl.style.left = `${this.settings.position.x}px`;
+        this.containerEl.style.top = `${this.settings.position.y}px`;
+        this.containerEl.style.right = "auto";
+      }
+    }
+  }
+
+  private applyBodyMargin(side: "left" | "right", width: number): void {
+    document.body.style.transition = "margin 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease";
+    if (side === "left") {
+      document.body.style.marginLeft = `${width}px`;
+      document.body.style.marginRight = "0px";
+      document.body.style.width = `calc(100% - ${width}px)`;
+    } else {
+      document.body.style.marginRight = `${width}px`;
+      document.body.style.marginLeft = "0px";
+      document.body.style.width = `calc(100% - ${width}px)`;
+    }
+  }
+
+  private clearBodyMargin(): void {
+    document.body.style.marginLeft = "";
+    document.body.style.marginRight = "";
+    document.body.style.width = "";
+  }
+
+  private clearDockClasses(): void {
+    this.containerEl.classList.remove("docked-left", "docked-right");
+  }
+
+  private applySnap(mode: NonNullable<OverlaySettings["snapMode"]>): void {
+    this.settings.snapMode = mode;
+
+    if (mode === "left-dock") {
+      this.containerEl.classList.remove("docked-right");
+      this.containerEl.classList.add("docked-left");
+      this.containerEl.style.left = "0px";
+      this.containerEl.style.right = "auto";
+      this.containerEl.style.top = "0px";
+      this.containerEl.style.bottom = "0px";
+      this.containerEl.style.width = "360px";
+      this.containerEl.style.height = "100vh";
+      if (!this.settings.collapsed) {
+        this.applyBodyMargin("left", 360);
+      }
+    } else if (mode === "right-dock") {
+      this.containerEl.classList.remove("docked-left");
+      this.containerEl.classList.add("docked-right");
+      this.containerEl.style.left = "auto";
+      this.containerEl.style.right = "0px";
+      this.containerEl.style.top = "0px";
+      this.containerEl.style.bottom = "0px";
+      this.containerEl.style.width = "360px";
+      this.containerEl.style.height = "100vh";
+      if (!this.settings.collapsed) {
+        this.applyBodyMargin("right", 360);
+      }
+    } else if (mode === "top-left") {
+      this.clearDockClasses();
+      this.clearBodyMargin();
+      this.containerEl.style.left = "8px";
+      this.containerEl.style.top = "8px";
+      this.containerEl.style.right = "auto";
+      this.containerEl.style.bottom = "auto";
+      this.containerEl.style.width = "340px";
+      this.containerEl.style.height = "calc(50vh - 16px)";
+      this.settings.position = { x: 8, y: 8 };
+    } else if (mode === "top-right") {
+      this.clearDockClasses();
+      this.clearBodyMargin();
+      const x = Math.max(10, window.innerWidth - 350);
+      this.containerEl.style.left = `${x}px`;
+      this.containerEl.style.top = "8px";
+      this.containerEl.style.right = "auto";
+      this.containerEl.style.bottom = "auto";
+      this.containerEl.style.width = "340px";
+      this.containerEl.style.height = "calc(50vh - 16px)";
+      this.settings.position = { x, y: 8 };
+    } else if (mode === "bottom-left") {
+      this.clearDockClasses();
+      this.clearBodyMargin();
+      const y = Math.max(10, Math.floor(window.innerHeight / 2) + 8);
+      this.containerEl.style.left = "8px";
+      this.containerEl.style.top = `${y}px`;
+      this.containerEl.style.right = "auto";
+      this.containerEl.style.bottom = "auto";
+      this.containerEl.style.width = "340px";
+      this.containerEl.style.height = "calc(50vh - 16px)";
+      this.settings.position = { x: 8, y };
+    } else if (mode === "bottom-right") {
+      this.clearDockClasses();
+      this.clearBodyMargin();
+      const x = Math.max(10, window.innerWidth - 350);
+      const y = Math.max(10, Math.floor(window.innerHeight / 2) + 8);
+      this.containerEl.style.left = `${x}px`;
+      this.containerEl.style.top = `${y}px`;
+      this.containerEl.style.right = "auto";
+      this.containerEl.style.bottom = "auto";
+      this.containerEl.style.width = "340px";
+      this.containerEl.style.height = "calc(50vh - 16px)";
+      this.settings.position = { x, y };
+    } else {
+      this.clearDockClasses();
+      this.clearBodyMargin();
+      this.containerEl.style.bottom = "auto";
+      if (this.settings.dimensions?.width) {
+        this.containerEl.style.width = `${this.settings.dimensions.width}px`;
+      }
+      if (this.settings.dimensions?.height && !this.settings.collapsed) {
+        this.containerEl.style.height = `${this.settings.dimensions.height}px`;
+      }
+    }
+
+    this.saveSettings();
+  }
+
   private buildUI(): void {
     this.containerEl = document.createElement("div");
     this.containerEl.className = `tr-overlay-container ${this.settings.collapsed ? "collapsed" : ""} ${this.settings.transparentOverlay ? "transparent" : ""}`;
@@ -226,6 +359,12 @@ export class OverlayUI {
       <div id="tr-settings-widget" class="tr-settings-drawer" style="display: none;"></div>
     `;
 
+    // Create Snap Preview Ghost Box
+    this.snapPreviewEl = document.createElement("div");
+    this.snapPreviewEl.className = "tr-snap-preview";
+    this.snapPreviewEl.id = "tr-snap-preview";
+
+    this.shadowRoot.appendChild(this.snapPreviewEl);
     this.shadowRoot.appendChild(this.containerEl);
 
     this.quoteWidgetEl = this.shadowRoot.getElementById("tr-quote-widget")!;
@@ -443,6 +582,7 @@ export class OverlayUI {
     let isDragging = false;
     let offsetX = 0;
     let offsetY = 0;
+    let currentSnapTarget: NonNullable<OverlaySettings["snapMode"]> = "none";
 
     header.addEventListener("mousedown", (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -450,32 +590,97 @@ export class OverlayUI {
         return;
       }
       isDragging = true;
-      const rect = this.containerEl.getBoundingClientRect();
-      offsetX = e.clientX - rect.left;
-      offsetY = e.clientY - rect.top;
+      currentSnapTarget = "none";
+
+      // If window was docked, undock smoothly and follow cursor
+      if (this.settings.snapMode && this.settings.snapMode !== "none") {
+        this.clearDockClasses();
+        this.clearBodyMargin();
+        this.settings.snapMode = "none";
+        this.containerEl.style.width = `${this.settings.dimensions?.width || 340}px`;
+        this.containerEl.style.height = `${this.settings.dimensions?.height || 420}px`;
+        offsetX = 170;
+        offsetY = 20;
+      } else {
+        const rect = this.containerEl.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+      }
     });
 
     window.addEventListener("mousemove", (e: MouseEvent) => {
       if (!isDragging) return;
+
       let x = e.clientX - offsetX;
       let y = e.clientY - offsetY;
 
-      x = Math.max(10, Math.min(window.innerWidth - 300, x));
-      y = Math.max(10, Math.min(window.innerHeight - 100, y));
+      x = Math.max(0, Math.min(window.innerWidth - 100, x));
+      y = Math.max(0, Math.min(window.innerHeight - 50, y));
 
       this.containerEl.style.left = `${x}px`;
       this.containerEl.style.top = `${y}px`;
       this.containerEl.style.right = "auto";
+      this.containerEl.style.bottom = "auto";
 
-      this.settings.position = { x, y };
+      // Determine Snapping Targets (Left, Right, Corners)
+      const isNearLeft = e.clientX < 50;
+      const isNearRight = e.clientX > window.innerWidth - 50;
+      const isNearTop = e.clientY < 70;
+      const isNearBottom = e.clientY > window.innerHeight - 70;
+
+      if (isNearLeft) {
+        if (isNearTop) {
+          currentSnapTarget = "top-left";
+          this.updateSnapPreview(8, 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
+        } else if (isNearBottom) {
+          currentSnapTarget = "bottom-left";
+          this.updateSnapPreview(8, Math.floor(window.innerHeight / 2) + 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
+        } else {
+          currentSnapTarget = "left-dock";
+          this.updateSnapPreview(0, 0, "auto", 0, 360, window.innerHeight);
+        }
+      } else if (isNearRight) {
+        if (isNearTop) {
+          currentSnapTarget = "top-right";
+          this.updateSnapPreview(window.innerWidth - 348, 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
+        } else if (isNearBottom) {
+          currentSnapTarget = "bottom-right";
+          this.updateSnapPreview(window.innerWidth - 348, Math.floor(window.innerHeight / 2) + 8, "auto", "auto", 340, Math.floor(window.innerHeight / 2) - 16);
+        } else {
+          currentSnapTarget = "right-dock";
+          this.updateSnapPreview(window.innerWidth - 360, 0, "auto", 0, 360, window.innerHeight);
+        }
+      } else {
+        currentSnapTarget = "none";
+        this.snapPreviewEl.classList.remove("visible");
+      }
     });
 
     window.addEventListener("mouseup", () => {
       if (isDragging) {
         isDragging = false;
-        this.saveSettings();
+        this.snapPreviewEl.classList.remove("visible");
+
+        if (currentSnapTarget !== "none") {
+          this.applySnap(currentSnapTarget);
+        } else {
+          const rect = this.containerEl.getBoundingClientRect();
+          this.settings.position = { x: rect.left, y: rect.top };
+          this.settings.snapMode = "none";
+          this.saveSettings();
+        }
       }
     });
+  }
+
+  private updateSnapPreview(left: number | string, top: number | string, right: number | string, bottom: number | string, width: number | string, height: number | string): void {
+    this.snapPreviewEl.style.left = typeof left === "number" ? `${left}px` : left;
+    this.snapPreviewEl.style.top = typeof top === "number" ? `${top}px` : top;
+    this.snapPreviewEl.style.right = typeof right === "number" ? `${right}px` : right;
+    this.snapPreviewEl.style.bottom = typeof bottom === "number" ? `${bottom}px` : bottom;
+    this.snapPreviewEl.style.width = typeof width === "number" ? `${width}px` : width;
+    this.snapPreviewEl.style.height = typeof height === "number" ? `${height}px` : height;
+    this.snapPreviewEl.classList.add("visible");
   }
 
   private initBorderResize(): void {
@@ -541,7 +746,7 @@ export class OverlayUI {
     if (typeof ResizeObserver !== "undefined") {
       const ro = new ResizeObserver((entries) => {
         for (const entry of entries) {
-          if (!this.settings.collapsed) {
+          if (!this.settings.collapsed && (!this.settings.snapMode || this.settings.snapMode === "none")) {
             const w = Math.round(entry.contentRect.width);
             const h = Math.round(entry.contentRect.height);
             if (w > 0 && h > 0) {

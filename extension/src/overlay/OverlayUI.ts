@@ -66,6 +66,9 @@ export class OverlayUI {
     if (collapseBtn) {
       collapseBtn.textContent = collapsed ? "＋" : "－";
     }
+    if (collapsed) {
+      this.closeSettings();
+    }
     this.saveSettings();
   }
 
@@ -152,6 +155,22 @@ export class OverlayUI {
     }
   }
 
+  private toggleSettings(): void {
+    const isHidden = this.settingsWidgetEl.style.display === "none";
+    if (isHidden) {
+      this.renderSettingsPanel();
+      this.settingsWidgetEl.style.display = "flex";
+      this.shadowRoot.getElementById("tr-btn-settings")?.classList.add("active");
+    } else {
+      this.closeSettings();
+    }
+  }
+
+  private closeSettings(): void {
+    this.settingsWidgetEl.style.display = "none";
+    this.shadowRoot.getElementById("tr-btn-settings")?.classList.remove("active");
+  }
+
   private buildUI(): void {
     this.containerEl = document.createElement("div");
     this.containerEl.className = `tr-overlay-container ${this.settings.collapsed ? "collapsed" : ""} ${this.settings.transparentOverlay ? "transparent" : ""}`;
@@ -201,8 +220,10 @@ export class OverlayUI {
         <div id="tr-quote-widget"></div>
         <div id="tr-streak-widget"></div>
         <div id="tr-races-widget"></div>
-        <div id="tr-settings-widget" style="display: none;"></div>
       </div>
+
+      <!-- Settings Modal Drawer Overlay -->
+      <div id="tr-settings-widget" class="tr-settings-drawer" style="display: none;"></div>
     `;
 
     this.shadowRoot.appendChild(this.containerEl);
@@ -239,19 +260,15 @@ export class OverlayUI {
 
     const collapseBtn = this.shadowRoot.getElementById("tr-btn-collapse")!;
     collapseBtn.addEventListener("click", () => {
-      this.settings.collapsed = !this.settings.collapsed;
-      this.containerEl.classList.toggle("collapsed", this.settings.collapsed);
-      collapseBtn.textContent = this.settings.collapsed ? "＋" : "－";
-      this.saveSettings();
+      this.setCollapsed(!this.settings.collapsed);
     });
 
     const settingsBtn = this.shadowRoot.getElementById("tr-btn-settings")!;
     settingsBtn.addEventListener("click", () => {
-      const isHidden = this.settingsWidgetEl.style.display === "none";
-      this.settingsWidgetEl.style.display = isHidden ? "block" : "none";
-      if (isHidden) {
-        this.renderSettingsPanel();
+      if (this.settings.collapsed) {
+        this.setCollapsed(false);
       }
+      this.toggleSettings();
     });
   }
 
@@ -264,8 +281,11 @@ export class OverlayUI {
     const wideMode = this.settings.wideMode ?? false;
 
     this.settingsWidgetEl.innerHTML = `
-      <div class="tr-card">
-        <div class="tr-card-title">Overlay Settings</div>
+      <div class="tr-card" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
+          <span style="font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #ef4444;">⚙ Extension Settings</span>
+          <button id="tr-btn-close-settings" class="tr-icon-btn" style="height: 20px; padding: 0 6px; font-size: 10px;">✕ Close</button>
+        </div>
         
         <div class="tr-setting-row">
           <span>Notify 1 Hour Before Reset</span>
@@ -341,6 +361,11 @@ export class OverlayUI {
       </div>
     `;
 
+    const closeBtn = this.shadowRoot.getElementById("tr-btn-close-settings");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => this.closeSettings());
+    }
+
     const notifyCheckbox = this.shadowRoot.getElementById("tr-set-notify") as HTMLInputElement;
     if (notifyCheckbox) {
       notifyCheckbox.addEventListener("change", () => {
@@ -408,7 +433,7 @@ export class OverlayUI {
         this.settings.apiKey = keyInput;
         this.updateUsernameTitle(userInput);
         this.saveSettings();
-        this.settingsWidgetEl.style.display = "none";
+        this.closeSettings();
       });
     }
   }

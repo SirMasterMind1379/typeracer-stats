@@ -45,8 +45,12 @@ The helper `formatDisplayDate()` in `src/types.ts` implements this. Use it where
 - **Icon Binary Header Alignment**: Icon declarations in `manifest.json` MUST match the exact binary format of the underlying image asset (`.jpg` for JPEG binaries).
 - **CORS Delegation via Service Worker**: Content scripts running in page context MUST delegate cross-origin network requests (`data.typeracer.com`) to `background.js` via `chrome.runtime.sendMessage()`.
 - **Uncapped Streak Data Querying**: Streak calculation helper functions MUST query up to 200 recent items before filtering competitive races to ensure accurate daily totals without artificial capping.
+- **React/Next.js DOM Mutation Safety**: NEVER move or re-parent TypeRacer's React DOM nodes via `appendChild()` or `insertBefore()`. Perform all layout adjustments strictly using **Pure CSS** (`:has()`, flexbox, CSS grid) to prevent React `removeChild` reconciliation crashes.
+- **Independent Window State Persistence**: Floating coordinates/dimensions (`position`, `dimensions`) MUST be stored independently from snapped sidebar width (`dockedWidth`). Undocking must restore floating size, and snapping must restore docked sidebar width.
+- **16px Dock Margin Gutter Invariant**: When window snapping is active, website body margins and width constraints MUST include a 16px breathing gap (`calc(var(--tr-dock-width) + 16px)`) so site elements never press flush against the extension border.
+- **Instant Cached Data Rendering on Reload**: Always save the active username to `localStorage.getItem("tr_username")` and synchronously render cached race and streak data from `localStorage`/`IndexedDB` on initial boot before awaiting async background network sync.
+- **Unified ExtensionRace Field Invariant**: All extension modules MUST consistently use `wpm` (1-decimal), `timestamp` (ms epoch), `dateStr` (`formatDisplayDate(timestamp)`), and `textId`, avoiding legacy `speed` or `date` fields.
 
 ## Testing & Privacy Constraints
 - **Browser Subagent QA**: Automatically run the `browser` subagent to test local applications (`http://localhost:1384`) after major iterations.
 - **Credential Privacy**: NEVER write down or commit user API keys, passwords, or private tokens into persistent documentation or codebase files. Keep secrets strictly transient in chat memory.
-

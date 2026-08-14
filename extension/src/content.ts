@@ -44,7 +44,6 @@ class TypeRacerOverlayApp {
       this.applyTopBarAutoHide(settings.autoHideTopBar ?? false);
       this.applyWideMode(settings.wideMode ?? false);
       this.applyLobbySocialsCleaner(settings.hideLobbySocials ?? true);
-      this.applyCompactLobbyButtons(settings.compactLobbyButtons ?? false);
 
       if (!settings.disableRacerPopupsDuringRace && this.isRaceActive) {
         document.documentElement.classList.remove("tr-suppress-racer-popups");
@@ -72,7 +71,6 @@ class TypeRacerOverlayApp {
     this.applyTopBarAutoHide(initialSettings.autoHideTopBar ?? false);
     this.applyWideMode(initialSettings.wideMode ?? false);
     this.applyLobbySocialsCleaner(initialSettings.hideLobbySocials ?? true);
-    this.applyCompactLobbyButtons(initialSettings.compactLobbyButtons ?? false);
     this.initTypingCursorHider();
     this.initRacerTooltipSuppressor();
 
@@ -311,48 +309,6 @@ class TypeRacerOverlayApp {
         document.head.appendChild(styleEl);
       }
     } else {
-      if (styleEl) {
-        styleEl.remove();
-      }
-    }
-  }
-
-  private applyCompactLobbyButtons(compact: boolean): void {
-    let styleEl = document.getElementById("tr-compact-lobby-style");
-
-    if (compact) {
-      document.documentElement.classList.add("tr-compact-lobby");
-      document.body.classList.add("tr-compact-lobby");
-
-      if (!styleEl) {
-        styleEl = document.createElement("style");
-        styleEl.id = "tr-compact-lobby-style";
-        styleEl.textContent = `
-          /* Pure CSS Side-by-Side Lobby & QOTD Cards - Zero DOM Re-parenting (React Safe!) */
-          html.tr-compact-lobby div.relative.w-full.flex.flex-col.gap-4:has(div[style*="bg_qotd"]),
-          html.tr-compact-lobby div[class*="flex-col"]:has(> div[class*="bg-card-background"] div[style*="bg_qotd"]),
-          html.tr-compact-lobby div[class*="flex-col"]:has(> div[class*="bg-card-background"]:has(div[style*="bg_qotd"])) {
-            display: grid !important;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-            gap: 16px !important;
-            align-items: stretch !important;
-          }
-
-          html.tr-compact-lobby div[class*="bg-card-background"]:has(div[style*="bg_qotd"]),
-          html.tr-compact-lobby div[class*="bg-card-background"]:has(a[href*="discord"]),
-          html.tr-compact-lobby div[class*="bg-card-background"]:has(button) {
-            height: 100% !important;
-            margin: 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-          }
-        `;
-        document.head.appendChild(styleEl);
-      }
-    } else {
-      document.documentElement.classList.remove("tr-compact-lobby");
-      document.body.classList.remove("tr-compact-lobby");
       if (styleEl) {
         styleEl.remove();
       }

@@ -28,7 +28,6 @@ export class OverlayUI {
     wideMode: false,
     hideCursorWhileTyping: false,
     disableRacerPopupsDuringRace: false,
-    compactLobbyButtons: false,
     snapMode: "none",
     dimensions: { width: 340, height: 420 },
     dockedWidth: 360,
@@ -426,7 +425,6 @@ export class OverlayUI {
     const wideMode = this.settings.wideMode ?? false;
     const hideCursor = this.settings.hideCursorWhileTyping ?? false;
     const blockPopups = this.settings.disableRacerPopupsDuringRace ?? false;
-    const compactLobby = this.settings.compactLobbyButtons ?? false;
 
     this.settingsWidgetEl.innerHTML = `
       <div class="tr-card" style="margin-bottom: 0;">
@@ -472,14 +470,6 @@ export class OverlayUI {
           <span>TypeRacer Wide Track Mode</span>
           <label class="tr-switch">
             <input type="checkbox" id="tr-set-widemode" ${wideMode ? "checked" : ""}>
-            <span class="tr-slider"></span>
-          </label>
-        </div>
-
-        <div class="tr-setting-row" style="margin-top: 6px;">
-          <span>Side-by-Side QOTD & Race Lobby Cards</span>
-          <label class="tr-switch">
-            <input type="checkbox" id="tr-set-compactlobby" ${compactLobby ? "checked" : ""}>
             <span class="tr-slider"></span>
           </label>
         </div>
@@ -597,14 +587,6 @@ export class OverlayUI {
     if (wideModeCheckbox) {
       wideModeCheckbox.addEventListener("change", () => {
         this.settings.wideMode = wideModeCheckbox.checked;
-        this.saveSettings();
-      });
-    }
-
-    const compactLobbyCheckbox = this.shadowRoot.getElementById("tr-set-compactlobby") as HTMLInputElement;
-    if (compactLobbyCheckbox) {
-      compactLobbyCheckbox.addEventListener("change", () => {
-        this.settings.compactLobbyButtons = compactLobbyCheckbox.checked;
         this.saveSettings();
       });
     }

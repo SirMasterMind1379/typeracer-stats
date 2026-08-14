@@ -47,7 +47,6 @@ export interface OverlaySettings {
   wideMode?: boolean;
   hideCursorWhileTyping?: boolean;
   disableRacerPopupsDuringRace?: boolean;
-  compactLobbyButtons?: boolean;
   hideLobbySocials?: boolean;
   snapMode?: "left-dock" | "right-dock" | "none";
   dimensions?: { width: number; height: number };

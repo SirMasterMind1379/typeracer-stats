@@ -1,15 +1,14 @@
 export interface ExtensionRace {
-  id: string;
-  date: string;
-  speed: number;
-  accuracy: number;
-  points: number | null;
-  rank: number;
-  totalRacers: number;
+  id: number;
   textId: number;
-  won: boolean;
+  wpm: number;
+  accuracy?: number;
+  rank?: number;
+  racers?: number;
+  timestamp: number;
+  dateStr: string;
   mode?: string;
-  quoteText?: string;
+  points?: number;
 }
 
 export interface QuoteHistoryRecord {
@@ -52,6 +51,7 @@ export interface OverlaySettings {
   hideLobbySocials?: boolean;
   snapMode?: "left-dock" | "right-dock" | "none";
   dimensions?: { width: number; height: number };
+  dockedWidth?: number;
 }
 
 export function isCompetitiveRace(r: ExtensionRace): boolean {
@@ -61,34 +61,60 @@ export function isCompetitiveRace(r: ExtensionRace): boolean {
       return false;
     }
   }
-  return (r.totalRacers ?? 0) > 1 || !r.mode || r.mode.toLowerCase().includes("multiplayer");
+  return true;
 }
 
-const MONTH_ABBR: Record<number, string> = {
-  0: "JA", 1: "FE", 2: "MR", 3: "AP", 4: "MA", 5: "JN",
-  6: "JL", 7: "AG", 8: "SE", 9: "OC", 10: "NV", 11: "DE",
-};
-
-export function formatDisplayDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const mo = MONTH_ABBR[d.getMonth()];
-  const dd = String(d.getDate()).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${mo}/${dd}/${yyyy}`;
+export function getToday00UTC(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 }
 
-export function parseApiRace(r: any): ExtensionRace {
+export function formatCountdown(seconds: number): string {
+  if (seconds < 0) seconds = 0;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+export function formatDisplayDate(dateInput: string | number | Date): string {
+  const MONTHS = ["JA", "FE", "MR", "AP", "MA", "JN", "JL", "AG", "SE", "OC", "NV", "DE"];
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  const month = MONTHS[d.getUTCMonth()];
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const year = d.getUTCFullYear();
+  return `${month}/${day}/${year}`;
+}
+
+export function parseApiRace(raw: any): ExtensionRace {
+  const gn = raw.gn || raw.id || 0;
+  const wpm = typeof raw.wpm === "number" ? raw.wpm : typeof raw.speed === "number" ? raw.speed : 0;
+  const textId = raw.tid || raw.textId || 0;
+  const timestamp = typeof raw.t === "number" ? (raw.t > 1e11 ? raw.t : raw.t * 1000) : Date.now();
+  const dateStr = formatDisplayDate(timestamp);
+  const accuracy =
+    typeof raw.ac === "number"
+      ? Math.round(raw.ac * 1000) / 10
+      : typeof raw.accuracy === "number"
+      ? raw.accuracy
+      : undefined;
+  const rank = raw.r || raw.rank || undefined;
+  const racers = raw.nr || raw.racers || undefined;
+  const mode = raw.mode || (raw.universe === "play" ? "multiplayer" : raw.universe) || "multiplayer";
+  const points = raw.pts || raw.points || undefined;
+
   return {
-    id: String(r.rid),
-    date: r.t ? (typeof r.t === "number" ? new Date(r.t * 1000).toISOString() : String(r.t)) : new Date().toISOString(),
-    speed: Number(Number(r.wpm).toFixed(1)),
-    accuracy: r.acc != null ? Number((r.acc * (r.acc <= 1 ? 100 : 1)).toFixed(1)) : 100,
-    points: r.pts != null ? Number(r.pts) : null,
-    rank: r.r || 1,
-    totalRacers: r.nr || 1,
-    textId: r.tid || 0,
-    won: r.r === 1,
-    mode: r.gn || r.mode || "multiplayer",
+    id: gn,
+    textId,
+    wpm: Math.round(wpm * 10) / 10,
+    accuracy,
+    rank,
+    racers,
+    timestamp,
+    dateStr,
+    mode,
+    points,
   };
 }

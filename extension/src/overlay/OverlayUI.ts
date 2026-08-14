@@ -31,6 +31,7 @@ export class OverlayUI {
     compactLobbyButtons: false,
     snapMode: "none",
     dimensions: { width: 340, height: 420 },
+    dockedWidth: 360,
   };
 
   private onSettingsChangeCallback: (settings: OverlaySettings) => void;
@@ -199,6 +200,12 @@ export class OverlayUI {
         this.containerEl.style.top = `${this.settings.position.y}px`;
         this.containerEl.style.right = "auto";
       }
+      if (this.settings.dimensions?.width) {
+        this.containerEl.style.width = `${this.settings.dimensions.width}px`;
+      }
+      if (this.settings.dimensions?.height && !this.settings.collapsed) {
+        this.containerEl.style.height = `${this.settings.dimensions.height}px`;
+      }
     }
   }
 
@@ -249,8 +256,8 @@ export class OverlayUI {
     this.containerEl.classList.toggle("transparent", !isSnapped && !!this.settings.transparentOverlay);
     this.containerEl.classList.remove("collapsed");
 
-    const dockW = this.settings.dimensions?.width
-      ? Math.max(280, Math.min(600, this.settings.dimensions.width))
+    const dockW = this.settings.dockedWidth
+      ? Math.max(260, Math.min(Math.floor(window.innerWidth * 0.6), this.settings.dockedWidth))
       : 360;
 
     if (mode === "left-dock") {
@@ -277,11 +284,14 @@ export class OverlayUI {
       this.clearDockClasses();
       this.clearBodyMargin();
       this.containerEl.style.bottom = "auto";
-      if (this.settings.dimensions?.width) {
-        this.containerEl.style.width = `${this.settings.dimensions.width}px`;
-      }
-      if (this.settings.dimensions?.height) {
-        this.containerEl.style.height = `${this.settings.dimensions.height}px`;
+      const floatW = this.settings.dimensions?.width || 340;
+      const floatH = this.settings.dimensions?.height || 420;
+      this.containerEl.style.width = `${floatW}px`;
+      this.containerEl.style.height = `${floatH}px`;
+      if (this.settings.position) {
+        this.containerEl.style.left = `${this.settings.position.x}px`;
+        this.containerEl.style.top = `${this.settings.position.y}px`;
+        this.containerEl.style.right = "auto";
       }
     }
 
@@ -293,11 +303,17 @@ export class OverlayUI {
     this.containerEl = document.createElement("div");
     this.containerEl.className = `tr-overlay-container ${this.settings.collapsed ? "collapsed" : ""} ${!isSnapped && this.settings.transparentOverlay ? "transparent" : ""}`;
 
-    if (this.settings.dimensions?.width) {
-      this.containerEl.style.width = `${this.settings.dimensions.width}px`;
-    }
-    if (this.settings.dimensions?.height && !this.settings.collapsed) {
-      this.containerEl.style.height = `${this.settings.dimensions.height}px`;
+    if (isSnapped) {
+      const dockW = this.settings.dockedWidth || 360;
+      this.containerEl.style.width = `${dockW}px`;
+      this.containerEl.style.height = "100vh";
+    } else {
+      if (this.settings.dimensions?.width) {
+        this.containerEl.style.width = `${this.settings.dimensions.width}px`;
+      }
+      if (this.settings.dimensions?.height && !this.settings.collapsed) {
+        this.containerEl.style.height = `${this.settings.dimensions.height}px`;
+      }
     }
 
     const initialTitleHtml = this.settings.username
@@ -678,10 +694,12 @@ export class OverlayUI {
         this.clearDockClasses();
         this.clearBodyMargin();
         this.settings.snapMode = "none";
-        this.containerEl.style.width = `${this.settings.dimensions?.width || 340}px`;
-        this.containerEl.style.height = `${this.settings.dimensions?.height || 420}px`;
+        const floatW = this.settings.dimensions?.width || 340;
+        const floatH = this.settings.dimensions?.height || 420;
+        this.containerEl.style.width = `${floatW}px`;
+        this.containerEl.style.height = `${floatH}px`;
         this.containerEl.classList.toggle("transparent", !!this.settings.transparentOverlay);
-        offsetX = 170;
+        offsetX = Math.floor(floatW / 2);
         offsetY = 20;
       } else {
         const rect = this.containerEl.getBoundingClientRect();
@@ -714,14 +732,13 @@ export class OverlayUI {
       // Left & Right Side Snapping Only
       const isNearLeft = e.clientX < 50;
       const isNearRight = e.clientX > window.innerWidth - 50;
+      const dockW = this.settings.dockedWidth || 360;
 
       if (isNearLeft) {
         currentSnapTarget = "left-dock";
-        const dockW = this.settings.dimensions?.width ? Math.max(280, Math.min(600, this.settings.dimensions.width)) : 360;
         this.updateSnapPreview(0, 0, "auto", 0, dockW, window.innerHeight);
       } else if (isNearRight) {
         currentSnapTarget = "right-dock";
-        const dockW = this.settings.dimensions?.width ? Math.max(280, Math.min(600, this.settings.dimensions.width)) : 360;
         this.updateSnapPreview(window.innerWidth - dockW, 0, "auto", 0, dockW, window.innerHeight);
       } else {
         currentSnapTarget = "none";
@@ -792,7 +809,7 @@ export class OverlayUI {
             this.containerEl.style.top = "0px";
             this.containerEl.style.right = "auto";
             this.applyBodyMargin("left", newW);
-            this.settings.dimensions = { width: newW, height: window.innerHeight };
+            this.settings.dockedWidth = newW;
             return;
           }
 
@@ -805,7 +822,7 @@ export class OverlayUI {
             this.containerEl.style.right = "0px";
             this.containerEl.style.top = "0px";
             this.applyBodyMargin("right", newW);
-            this.settings.dimensions = { width: newW, height: window.innerHeight };
+            this.settings.dockedWidth = newW;
             return;
           }
 
@@ -852,10 +869,10 @@ export class OverlayUI {
           if (w > 0) {
             if (this.settings.snapMode === "left-dock") {
               this.applyBodyMargin("left", w);
-              this.settings.dimensions = { width: w, height: window.innerHeight };
+              this.settings.dockedWidth = w;
             } else if (this.settings.snapMode === "right-dock") {
               this.applyBodyMargin("right", w);
-              this.settings.dimensions = { width: w, height: window.innerHeight };
+              this.settings.dockedWidth = w;
             } else if (!this.settings.collapsed && h > 0) {
               this.settings.dimensions = { width: w, height: h };
             }

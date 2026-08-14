@@ -40,6 +40,8 @@ class TypeRacerOverlayApp {
         this.notifier.requestPermission();
       }
       this.applyUpsellsCleaner(settings.hideUpsells ?? true);
+      this.applyTopBarAutoHide(settings.autoHideTopBar ?? false);
+      this.applyWideMode(settings.wideMode ?? false);
 
       if (settings.username && settings.username !== this.activeUsername) {
         this.handleUsernameChanged(settings.username);
@@ -56,9 +58,11 @@ class TypeRacerOverlayApp {
       await this.refreshOverlayData(true);
     });
 
-    // 3. Apply Upsells Cleaner on startup for all subdomains
+    // 3. Apply Initial Page Enhancements & Settings
     const initialSettings = this.ui.getSettings();
     this.applyUpsellsCleaner(initialSettings.hideUpsells ?? true);
+    this.applyTopBarAutoHide(initialSettings.autoHideTopBar ?? false);
+    this.applyWideMode(initialSettings.wideMode ?? false);
 
     // 4. Initialize Component Widgets
     this.quoteHistoryWidget = new QuoteHistoryWidget(this.ui.quoteWidgetEl);
@@ -144,6 +148,74 @@ class TypeRacerOverlayApp {
             height: 0 !important;
             opacity: 0 !important;
             pointer-events: none !important;
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+    } else {
+      if (styleEl) {
+        styleEl.remove();
+      }
+    }
+  }
+
+  private applyTopBarAutoHide(autoHide: boolean): void {
+    let styleEl = document.getElementById("tr-autohide-topbar-style");
+    if (autoHide) {
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = "tr-autohide-topbar-style";
+        styleEl.textContent = `
+          /* Auto-Hide TypeRacer Top Bar (Reveals on Hover) */
+          header,
+          nav,
+          .header,
+          #header,
+          .gwt-MenuBar,
+          div[class*="Header"],
+          div[class*="navbar"] {
+            opacity: 0 !important;
+            max-height: 12px !important;
+            overflow: hidden !important;
+            transition: opacity 0.25s ease, max-height 0.3s ease !important;
+          }
+          header:hover,
+          nav:hover,
+          .header:hover,
+          #header:hover,
+          .gwt-MenuBar:hover,
+          div[class*="Header"]:hover,
+          div[class*="navbar"]:hover {
+            opacity: 1 !important;
+            max-height: 300px !important;
+            overflow: visible !important;
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+    } else {
+      if (styleEl) {
+        styleEl.remove();
+      }
+    }
+  }
+
+  private applyWideMode(wideMode: boolean): void {
+    let styleEl = document.getElementById("tr-widemode-style");
+    if (wideMode) {
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = "tr-widemode-style";
+        styleEl.textContent = `
+          /* TypeRacer Wide Track & Board Mode */
+          div.max-w-4xl,
+          div[class*="max-w-4xl"],
+          div[class*="xl:mr-80"],
+          div[class*="2xl:mx-auto"] {
+            max-width: 95vw !important;
+            width: 95% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
           }
         `;
         document.head.appendChild(styleEl);

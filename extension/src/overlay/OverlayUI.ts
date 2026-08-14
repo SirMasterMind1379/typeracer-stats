@@ -19,6 +19,9 @@ export class OverlayUI {
     themeMode: "auto",
     hideUpsells: true,
     autoMinimizeOnRace: false,
+    autoHideTopBar: false,
+    transparentOverlay: false,
+    wideMode: false,
     dimensions: { width: 340, height: 420 },
   };
 
@@ -116,6 +119,7 @@ export class OverlayUI {
     const theme = this.getEffectiveTheme();
     this.containerEl.classList.remove("light", "dark");
     this.containerEl.classList.add(theme);
+    this.containerEl.classList.toggle("transparent", !!this.settings.transparentOverlay);
 
     const themeBtn = this.shadowRoot.getElementById("tr-btn-theme");
     if (themeBtn) {
@@ -150,7 +154,7 @@ export class OverlayUI {
 
   private buildUI(): void {
     this.containerEl = document.createElement("div");
-    this.containerEl.className = `tr-overlay-container ${this.settings.collapsed ? "collapsed" : ""}`;
+    this.containerEl.className = `tr-overlay-container ${this.settings.collapsed ? "collapsed" : ""} ${this.settings.transparentOverlay ? "transparent" : ""}`;
 
     if (this.settings.dimensions?.width) {
       this.containerEl.style.width = `${this.settings.dimensions.width}px`;
@@ -255,6 +259,9 @@ export class OverlayUI {
     const currentMode = this.settings.themeMode || "auto";
     const hideUpsells = this.settings.hideUpsells ?? true;
     const autoMin = this.settings.autoMinimizeOnRace ?? false;
+    const autoTopBar = this.settings.autoHideTopBar ?? false;
+    const transparentOverlay = this.settings.transparentOverlay ?? false;
+    const wideMode = this.settings.wideMode ?? false;
 
     this.settingsWidgetEl.innerHTML = `
       <div class="tr-card">
@@ -280,6 +287,30 @@ export class OverlayUI {
           <span>Auto-Minimize During Race</span>
           <label class="tr-switch">
             <input type="checkbox" id="tr-set-autominimize" ${autoMin ? "checked" : ""}>
+            <span class="tr-slider"></span>
+          </label>
+        </div>
+
+        <div class="tr-setting-row" style="margin-top: 6px;">
+          <span>Auto-Hide Top Bar (Hover to Show)</span>
+          <label class="tr-switch">
+            <input type="checkbox" id="tr-set-autohidetopbar" ${autoTopBar ? "checked" : ""}>
+            <span class="tr-slider"></span>
+          </label>
+        </div>
+
+        <div class="tr-setting-row" style="margin-top: 6px;">
+          <span>Window Transparency (Hover to Focus)</span>
+          <label class="tr-switch">
+            <input type="checkbox" id="tr-set-transparency" ${transparentOverlay ? "checked" : ""}>
+            <span class="tr-slider"></span>
+          </label>
+        </div>
+
+        <div class="tr-setting-row" style="margin-top: 6px;">
+          <span>TypeRacer Wide Track Mode</span>
+          <label class="tr-switch">
+            <input type="checkbox" id="tr-set-widemode" ${wideMode ? "checked" : ""}>
             <span class="tr-slider"></span>
           </label>
         </div>
@@ -330,6 +361,31 @@ export class OverlayUI {
     if (autoMinCheckbox) {
       autoMinCheckbox.addEventListener("change", () => {
         this.settings.autoMinimizeOnRace = autoMinCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
+    const autoTopBarCheckbox = this.shadowRoot.getElementById("tr-set-autohidetopbar") as HTMLInputElement;
+    if (autoTopBarCheckbox) {
+      autoTopBarCheckbox.addEventListener("change", () => {
+        this.settings.autoHideTopBar = autoTopBarCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
+    const transparencyCheckbox = this.shadowRoot.getElementById("tr-set-transparency") as HTMLInputElement;
+    if (transparencyCheckbox) {
+      transparencyCheckbox.addEventListener("change", () => {
+        this.settings.transparentOverlay = transparencyCheckbox.checked;
+        this.containerEl.classList.toggle("transparent", this.settings.transparentOverlay);
+        this.saveSettings();
+      });
+    }
+
+    const wideModeCheckbox = this.shadowRoot.getElementById("tr-set-widemode") as HTMLInputElement;
+    if (wideModeCheckbox) {
+      wideModeCheckbox.addEventListener("change", () => {
+        this.settings.wideMode = wideModeCheckbox.checked;
         this.saveSettings();
       });
     }

@@ -42,6 +42,9 @@ export interface OverlaySettings {
   themeMode?: "auto" | "light" | "dark";
   hideUpsells?: boolean;
   autoMinimizeOnRace?: boolean;
+  autoHideTopBar?: boolean;
+  transparentOverlay?: boolean;
+  wideMode?: boolean;
   dimensions?: { width: number; height: number };
 }
 

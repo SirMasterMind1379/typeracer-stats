@@ -164,11 +164,11 @@ class TypeRacerOverlayApp {
           box-sizing: border-box !important;
         }
 
-        /* Center content nicely without forcing wide mode expansion */
-        html.tr-docked-left .max-w-4xl,
-        html.tr-docked-left div[class*="max-w-4xl"],
-        html.tr-docked-right .max-w-4xl,
-        html.tr-docked-right div[class*="max-w-4xl"] {
+        /* Center content nicely without forcing wide mode expansion when Wide Mode is OFF */
+        html.tr-docked-left:not(.tr-wide-mode) .max-w-4xl,
+        html.tr-docked-left:not(.tr-wide-mode) div[class*="max-w-4xl"],
+        html.tr-docked-right:not(.tr-wide-mode) .max-w-4xl,
+        html.tr-docked-right:not(.tr-wide-mode) div[class*="max-w-4xl"] {
           max-width: min(56rem, calc(100vw - var(--tr-dock-width, 360px) - 24px)) !important;
           width: 100% !important;
           margin-left: auto !important;
@@ -523,11 +523,21 @@ class TypeRacerOverlayApp {
     let styleEl = document.getElementById("tr-wide-mode-style");
 
     if (wideMode) {
+      document.documentElement.classList.add("tr-wide-mode");
+      document.body.classList.add("tr-wide-mode");
+
       if (!styleEl) {
         styleEl = document.createElement("style");
         styleEl.id = "tr-wide-mode-style";
         styleEl.textContent = `
-          /* TypeRacer Wide Track Mode (Wider track layout) */
+          /* TypeRacer Wide Track Mode (Expands fully across available space without going under extension) */
+          html.tr-wide-mode .max-w-4xl,
+          html.tr-wide-mode div[class*="max-w-4xl"],
+          html.tr-wide-mode .main-content,
+          html.tr-wide-mode .racetrackContainer,
+          html.tr-wide-mode .main-view,
+          html.tr-wide-mode div[class*="main-content"],
+          html.tr-wide-mode div[class*="racetrackContainer"],
           .max-w-4xl,
           div[class*="max-w-4xl"],
           .main-content,
@@ -548,6 +558,8 @@ class TypeRacerOverlayApp {
         document.head.appendChild(styleEl);
       }
     } else {
+      document.documentElement.classList.remove("tr-wide-mode");
+      document.body.classList.remove("tr-wide-mode");
       if (styleEl) {
         styleEl.remove();
       }

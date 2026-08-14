@@ -68,6 +68,7 @@ class TypeRacerOverlayApp {
 
     // 3. Apply Initial Page Enhancements & Settings
     const initialSettings = this.ui.getSettings();
+    this.initDockingStyles();
     this.applyUpsellsCleaner(initialSettings.hideUpsells ?? true);
     this.applyTopBarAutoHide(initialSettings.autoHideTopBar ?? false);
     this.applyWideMode(initialSettings.wideMode ?? false);
@@ -119,6 +120,61 @@ class TypeRacerOverlayApp {
     });
 
     console.log("[TypeRacer Overlay] Initialized successfully on *.typeracer.com!");
+  }
+
+  private initDockingStyles(): void {
+    let style = document.getElementById("tr-docking-layout-style");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "tr-docking-layout-style";
+      style.textContent = `
+        /* Docking Layout Adjustment Styles - Guarantees full site visibility */
+        html.tr-docked-left, body.tr-docked-left {
+          margin-left: 360px !important;
+          margin-right: 0 !important;
+          width: calc(100vw - 360px) !important;
+          max-width: calc(100vw - 360px) !important;
+          box-sizing: border-box !important;
+          transition: margin 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease !important;
+        }
+
+        html.tr-docked-right, body.tr-docked-right {
+          margin-right: 360px !important;
+          margin-left: 0 !important;
+          width: calc(100vw - 360px) !important;
+          max-width: calc(100vw - 360px) !important;
+          box-sizing: border-box !important;
+          transition: margin 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease !important;
+        }
+
+        html.tr-docked-left #root,
+        html.tr-docked-left #__next,
+        html.tr-docked-left main,
+        html.tr-docked-left .main-view,
+        html.tr-docked-left .main-content,
+        html.tr-docked-left div[class*="min-h-screen"],
+        html.tr-docked-right #root,
+        html.tr-docked-right #__next,
+        html.tr-docked-right main,
+        html.tr-docked-right .main-view,
+        html.tr-docked-right .main-content,
+        html.tr-docked-right div[class*="min-h-screen"] {
+          max-width: 100% !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        html.tr-docked-left .max-w-4xl,
+        html.tr-docked-left div[class*="max-w-4xl"],
+        html.tr-docked-right .max-w-4xl,
+        html.tr-docked-right div[class*="max-w-4xl"] {
+          max-width: calc(100vw - 380px) !important;
+          width: calc(100vw - 380px) !important;
+          box-sizing: border-box !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
   }
 
   private initTypingCursorHider(): void {
@@ -247,54 +303,63 @@ class TypeRacerOverlayApp {
         styleEl = document.createElement("style");
         styleEl.id = "tr-compact-lobby-style";
         styleEl.textContent = `
-          /* Side-by-Side Lobby & QOTD Action Buttons Styling */
+          /* Side-by-Side Lobby & QOTD Action Cards Grid */
           #tr-side-by-side-lobby-row {
-            display: flex !important;
-            flex-direction: row !important;
-            gap: 12px !important;
-            align-items: center !important;
-            justify-content: center !important;
-            flex-wrap: wrap !important;
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+            gap: 16px !important;
             width: 100% !important;
             margin: 8px 0 !important;
+            align-items: stretch !important;
           }
-          #tr-side-by-side-lobby-row > * {
-            flex: 1 1 220px !important;
-            max-width: 380px !important;
-            margin: 0 !important;
+          #tr-side-by-side-lobby-row > div {
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
           }
         `;
         document.head.appendChild(styleEl);
       }
 
-      // Re-parent QOTD button adjacent to Enter a Typing Race button
-      const allButtons = Array.from(document.querySelectorAll("button, a, div[role='button']"));
-      const enterRaceBtn = allButtons.find((b) => b.textContent && /enter\s*a\s*typing\s*race/i.test(b.textContent));
-      const qotdBtn = allButtons.find((b) => b.textContent && /quote\s*of\s*the\s*day/i.test(b.textContent));
+      // Locate QOTD full box card & Main race card
+      const qotdHeading = Array.from(document.querySelectorAll("h2, h3, p")).find(
+        (el) => el.textContent && /quote\s*of\s*the\s*day/i.test(el.textContent)
+      );
+      const qotdCard = (qotdHeading?.closest(
+        "div[class*='bg-card-background'], div[class*='rounded-lg'], div[class*='border-card-border']"
+      ) || document.querySelector("div[style*='bg_qotd']")) as HTMLElement | null;
 
-      if (enterRaceBtn && qotdBtn && enterRaceBtn.parentElement) {
-        const enterContainer = (enterRaceBtn.closest("div[class*='card'], .mainMenu, div[class*='rounded-lg']") || enterRaceBtn.parentElement) as HTMLElement;
-        const qotdContainer = (qotdBtn.closest("div[class*='card'], .mainMenu, div[class*='rounded-lg']") || qotdBtn.parentElement) as HTMLElement;
+      const enterRaceBtn = Array.from(document.querySelectorAll("button, a")).find(
+        (b) => b.textContent && /enter\s*a\s*typing\s*race/i.test(b.textContent)
+      );
+      const raceCard = enterRaceBtn?.closest(
+        "div[class*='bg-card-background'], div[class*='rounded-lg'], div[class*='border-card-border'], .mainMenu"
+      ) as HTMLElement | null;
 
+      if (raceCard && qotdCard && raceCard !== qotdCard && raceCard.parentElement) {
         let row = document.getElementById("tr-side-by-side-lobby-row");
-        if (!row && enterRaceBtn.parentElement) {
+        if (!row) {
           row = document.createElement("div");
           row.id = "tr-side-by-side-lobby-row";
-          enterRaceBtn.parentElement.insertBefore(row, enterRaceBtn);
-          row.appendChild(enterRaceBtn);
-          row.appendChild(qotdBtn);
-
-          // Hide empty leftover QOTD card container if separate
-          if (qotdContainer && qotdContainer !== enterContainer && !qotdContainer.contains(row)) {
-            if (qotdContainer.textContent?.trim() === "" || qotdContainer.children.length === 0) {
-              qotdContainer.style.display = "none";
-            }
-          }
+          raceCard.parentElement.insertBefore(row, raceCard);
+          row.appendChild(raceCard);
+          row.appendChild(qotdCard);
+        } else if (!row.contains(raceCard) || !row.contains(qotdCard)) {
+          row.appendChild(raceCard);
+          row.appendChild(qotdCard);
         }
       }
     } else {
       if (styleEl) {
         styleEl.remove();
+      }
+      const row = document.getElementById("tr-side-by-side-lobby-row");
+      if (row && row.parentElement) {
+        while (row.firstChild) {
+          row.parentElement.insertBefore(row.firstChild, row);
+        }
+        row.remove();
       }
     }
   }

@@ -203,12 +203,18 @@ export class OverlayUI {
   }
 
   private applyBodyMargin(side: "left" | "right", width: number): void {
-    document.body.style.transition = "margin 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease";
+    document.documentElement.classList.remove("tr-docked-left", "tr-docked-right");
+    document.body.classList.remove("tr-docked-left", "tr-docked-right");
+
     if (side === "left") {
+      document.documentElement.classList.add("tr-docked-left");
+      document.body.classList.add("tr-docked-left");
       document.body.style.marginLeft = `${width}px`;
       document.body.style.marginRight = "0px";
       document.body.style.width = `calc(100% - ${width}px)`;
     } else {
+      document.documentElement.classList.add("tr-docked-right");
+      document.body.classList.add("tr-docked-right");
       document.body.style.marginRight = `${width}px`;
       document.body.style.marginLeft = "0px";
       document.body.style.width = `calc(100% - ${width}px)`;
@@ -216,6 +222,8 @@ export class OverlayUI {
   }
 
   private clearBodyMargin(): void {
+    document.documentElement.classList.remove("tr-docked-left", "tr-docked-right");
+    document.body.classList.remove("tr-docked-left", "tr-docked-right");
     document.body.style.marginLeft = "";
     document.body.style.marginRight = "";
     document.body.style.width = "";
@@ -429,7 +437,7 @@ export class OverlayUI {
         </div>
 
         <div class="tr-setting-row" style="margin-top: 6px;">
-          <span>Side-by-Side Lobby & QOTD Buttons</span>
+          <span>Side-by-Side QOTD & Race Lobby Cards</span>
           <label class="tr-switch">
             <input type="checkbox" id="tr-set-compactlobby" ${compactLobby ? "checked" : ""}>
             <span class="tr-slider"></span>

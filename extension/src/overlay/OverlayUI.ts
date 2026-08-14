@@ -20,6 +20,7 @@ export class OverlayUI {
     apiKey: "",
     themeMode: "auto",
     hideUpsells: true,
+    enableSnapping: true,
     autoMinimizeOnRace: false,
     autoHideTopBar: false,
     transparentOverlay: false,
@@ -84,6 +85,10 @@ export class OverlayUI {
   }
 
   public isAutoMinimizeEnabled(): boolean {
+    // Snapped sidebars do not block the central racetrack, so only auto-minimize when free-floating
+    if (this.settings.snapMode && this.settings.snapMode !== "none") {
+      return false;
+    }
     return !!this.settings.autoMinimizeOnRace;
   }
 
@@ -133,7 +138,10 @@ export class OverlayUI {
     const theme = this.getEffectiveTheme();
     this.containerEl.classList.remove("light", "dark");
     this.containerEl.classList.add(theme);
-    this.containerEl.classList.toggle("transparent", !!this.settings.transparentOverlay);
+
+    // Transparency only applies when free-floating (not docked)
+    const isSnapped = this.settings.snapMode && this.settings.snapMode !== "none";
+    this.containerEl.classList.toggle("transparent", !isSnapped && !!this.settings.transparentOverlay);
 
     const themeBtn = this.shadowRoot.getElementById("tr-btn-theme");
     if (themeBtn) {
@@ -184,7 +192,7 @@ export class OverlayUI {
 
   private applyInitialPositionAndSnap(): void {
     const snap = this.settings.snapMode || "none";
-    if (snap !== "none") {
+    if (this.settings.enableSnapping !== false && snap !== "none") {
       this.applySnap(snap);
     } else {
       if (this.settings.position) {
@@ -220,6 +228,10 @@ export class OverlayUI {
 
   private applySnap(mode: NonNullable<OverlaySettings["snapMode"]>): void {
     this.settings.snapMode = mode;
+    const isSnapped = mode !== "none";
+
+    // Disable transparency when docked so stats are fully readable
+    this.containerEl.classList.toggle("transparent", !isSnapped && !!this.settings.transparentOverlay);
 
     if (mode === "left-dock") {
       this.containerEl.classList.remove("docked-right");
@@ -305,8 +317,9 @@ export class OverlayUI {
   }
 
   private buildUI(): void {
+    const isSnapped = this.settings.snapMode && this.settings.snapMode !== "none";
     this.containerEl = document.createElement("div");
-    this.containerEl.className = `tr-overlay-container ${this.settings.collapsed ? "collapsed" : ""} ${this.settings.transparentOverlay ? "transparent" : ""}`;
+    this.containerEl.className = `tr-overlay-container ${this.settings.collapsed ? "collapsed" : ""} ${!isSnapped && this.settings.transparentOverlay ? "transparent" : ""}`;
 
     if (this.settings.dimensions?.width) {
       this.containerEl.style.width = `${this.settings.dimensions.width}px`;
@@ -414,6 +427,7 @@ export class OverlayUI {
   private renderSettingsPanel(): void {
     const currentMode = this.settings.themeMode || "auto";
     const hideUpsells = this.settings.hideUpsells ?? true;
+    const enableSnapping = this.settings.enableSnapping ?? true;
     const autoMin = this.settings.autoMinimizeOnRace ?? false;
     const autoTopBar = this.settings.autoHideTopBar ?? false;
     const transparentOverlay = this.settings.transparentOverlay ?? false;
@@ -443,25 +457,9 @@ export class OverlayUI {
         </div>
 
         <div class="tr-setting-row" style="margin-top: 6px;">
-          <span>Auto-Minimize During Race</span>
-          <label class="tr-switch">
-            <input type="checkbox" id="tr-set-autominimize" ${autoMin ? "checked" : ""}>
-            <span class="tr-slider"></span>
-          </label>
-        </div>
-
-        <div class="tr-setting-row" style="margin-top: 6px;">
           <span>Auto-Hide Top Bar (Hover to Show)</span>
           <label class="tr-switch">
             <input type="checkbox" id="tr-set-autohidetopbar" ${autoTopBar ? "checked" : ""}>
-            <span class="tr-slider"></span>
-          </label>
-        </div>
-
-        <div class="tr-setting-row" style="margin-top: 6px;">
-          <span>Window Transparency (Hover to Focus)</span>
-          <label class="tr-switch">
-            <input type="checkbox" id="tr-set-transparency" ${transparentOverlay ? "checked" : ""}>
             <span class="tr-slider"></span>
           </label>
         </div>
@@ -474,7 +472,37 @@ export class OverlayUI {
           </label>
         </div>
 
-        <div class="tr-setting-row" style="margin-top: 6px;">
+        <!-- Window Snapping & Docking Master Setting -->
+        <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+          <div class="tr-setting-row">
+            <span style="font-weight: 700; color: #ef4444;">Enable Window Snapping & Docking</span>
+            <label class="tr-switch">
+              <input type="checkbox" id="tr-set-enablesnapping" ${enableSnapping ? "checked" : ""}>
+              <span class="tr-slider"></span>
+            </label>
+          </div>
+
+          <!-- Floating Mode Sub-Settings (Only active when window is floating) -->
+          <div style="margin-top: 6px; padding-left: 10px; border-left: 2px solid rgba(239, 68, 68, 0.4); display: flex; flex-direction: column; gap: 6px;">
+            <div class="tr-setting-row">
+              <span style="font-size: 10.5px;">Auto-Minimize During Race <em style="opacity: 0.6; font-size: 9.5px;">(Floating Only)</em></span>
+              <label class="tr-switch">
+                <input type="checkbox" id="tr-set-autominimize" ${autoMin ? "checked" : ""}>
+                <span class="tr-slider"></span>
+              </label>
+            </div>
+
+            <div class="tr-setting-row">
+              <span style="font-size: 10.5px;">Window Transparency <em style="opacity: 0.6; font-size: 9.5px;">(Floating Only)</em></span>
+              <label class="tr-switch">
+                <input type="checkbox" id="tr-set-transparency" ${transparentOverlay ? "checked" : ""}>
+                <span class="tr-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="tr-setting-row" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
           <span>Theme Mode</span>
           <select id="tr-set-theme" style="background: rgba(0,0,0,0.3); color: inherit; border: 1px solid rgba(128,128,128,0.3); border-radius: 4px; padding: 2px 6px; font-size: 11px;">
             <option value="auto" ${currentMode === "auto" ? "selected" : ""}>Auto (System)</option>
@@ -521,6 +549,17 @@ export class OverlayUI {
       });
     }
 
+    const snappingCheckbox = this.shadowRoot.getElementById("tr-set-enablesnapping") as HTMLInputElement;
+    if (snappingCheckbox) {
+      snappingCheckbox.addEventListener("change", () => {
+        this.settings.enableSnapping = snappingCheckbox.checked;
+        if (!this.settings.enableSnapping && this.settings.snapMode !== "none") {
+          this.applySnap("none");
+        }
+        this.saveSettings();
+      });
+    }
+
     const autoMinCheckbox = this.shadowRoot.getElementById("tr-set-autominimize") as HTMLInputElement;
     if (autoMinCheckbox) {
       autoMinCheckbox.addEventListener("change", () => {
@@ -541,7 +580,8 @@ export class OverlayUI {
     if (transparencyCheckbox) {
       transparencyCheckbox.addEventListener("change", () => {
         this.settings.transparentOverlay = transparencyCheckbox.checked;
-        this.containerEl.classList.toggle("transparent", this.settings.transparentOverlay);
+        const isSnapped = this.settings.snapMode && this.settings.snapMode !== "none";
+        this.containerEl.classList.toggle("transparent", !isSnapped && this.settings.transparentOverlay);
         this.saveSettings();
       });
     }
@@ -599,6 +639,7 @@ export class OverlayUI {
         this.settings.snapMode = "none";
         this.containerEl.style.width = `${this.settings.dimensions?.width || 340}px`;
         this.containerEl.style.height = `${this.settings.dimensions?.height || 420}px`;
+        this.containerEl.classList.toggle("transparent", !!this.settings.transparentOverlay);
         offsetX = 170;
         offsetY = 20;
       } else {
@@ -621,6 +662,13 @@ export class OverlayUI {
       this.containerEl.style.top = `${y}px`;
       this.containerEl.style.right = "auto";
       this.containerEl.style.bottom = "auto";
+
+      // Check if snapping is enabled
+      if (this.settings.enableSnapping === false) {
+        currentSnapTarget = "none";
+        this.snapPreviewEl.classList.remove("visible");
+        return;
+      }
 
       // Determine Snapping Targets (Left, Right, Corners)
       const isNearLeft = e.clientX < 50;
@@ -661,12 +709,13 @@ export class OverlayUI {
         isDragging = false;
         this.snapPreviewEl.classList.remove("visible");
 
-        if (currentSnapTarget !== "none") {
+        if (this.settings.enableSnapping !== false && currentSnapTarget !== "none") {
           this.applySnap(currentSnapTarget);
         } else {
           const rect = this.containerEl.getBoundingClientRect();
           this.settings.position = { x: rect.left, y: rect.top };
           this.settings.snapMode = "none";
+          this.containerEl.classList.toggle("transparent", !!this.settings.transparentOverlay);
           this.saveSettings();
         }
       }

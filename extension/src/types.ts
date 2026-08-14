@@ -41,6 +41,7 @@ export interface OverlaySettings {
   apiKey?: string;
   themeMode?: "auto" | "light" | "dark";
   hideUpsells?: boolean;
+  enableSnapping?: boolean;
   autoMinimizeOnRace?: boolean;
   autoHideTopBar?: boolean;
   transparentOverlay?: boolean;

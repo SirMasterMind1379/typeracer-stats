@@ -46,6 +46,8 @@ export interface OverlaySettings {
   autoHideTopBar?: boolean;
   transparentOverlay?: boolean;
   wideMode?: boolean;
+  hideCursorWhileTyping?: boolean;
+  disableRacerPopupsDuringRace?: boolean;
   snapMode?: "left-dock" | "right-dock" | "none";
   dimensions?: { width: number; height: number };
 }

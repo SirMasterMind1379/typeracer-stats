@@ -25,6 +25,8 @@ export class OverlayUI {
     autoHideTopBar: false,
     transparentOverlay: false,
     wideMode: false,
+    hideCursorWhileTyping: false,
+    disableRacerPopupsDuringRace: false,
     snapMode: "none",
     dimensions: { width: 340, height: 420 },
   };
@@ -380,6 +382,8 @@ export class OverlayUI {
     const autoTopBar = this.settings.autoHideTopBar ?? false;
     const transparentOverlay = this.settings.transparentOverlay ?? false;
     const wideMode = this.settings.wideMode ?? false;
+    const hideCursor = this.settings.hideCursorWhileTyping ?? false;
+    const blockPopups = this.settings.disableRacerPopupsDuringRace ?? false;
 
     this.settingsWidgetEl.innerHTML = `
       <div class="tr-card" style="margin-bottom: 0;">
@@ -416,6 +420,22 @@ export class OverlayUI {
           <span>TypeRacer Wide Track Mode</span>
           <label class="tr-switch">
             <input type="checkbox" id="tr-set-widemode" ${wideMode ? "checked" : ""}>
+            <span class="tr-slider"></span>
+          </label>
+        </div>
+
+        <div class="tr-setting-row" style="margin-top: 6px;">
+          <span>Hide Mouse Cursor While Typing</span>
+          <label class="tr-switch">
+            <input type="checkbox" id="tr-set-hidecursor" ${hideCursor ? "checked" : ""}>
+            <span class="tr-slider"></span>
+          </label>
+        </div>
+
+        <div class="tr-setting-row" style="margin-top: 6px;">
+          <span>Block Racer Popups During Race</span>
+          <label class="tr-switch">
+            <input type="checkbox" id="tr-set-blockpopups" ${blockPopups ? "checked" : ""}>
             <span class="tr-slider"></span>
           </label>
         </div>
@@ -497,6 +517,38 @@ export class OverlayUI {
       });
     }
 
+    const autoTopBarCheckbox = this.shadowRoot.getElementById("tr-set-autohidetopbar") as HTMLInputElement;
+    if (autoTopBarCheckbox) {
+      autoTopBarCheckbox.addEventListener("change", () => {
+        this.settings.autoHideTopBar = autoTopBarCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
+    const wideModeCheckbox = this.shadowRoot.getElementById("tr-set-widemode") as HTMLInputElement;
+    if (wideModeCheckbox) {
+      wideModeCheckbox.addEventListener("change", () => {
+        this.settings.wideMode = wideModeCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
+    const hideCursorCheckbox = this.shadowRoot.getElementById("tr-set-hidecursor") as HTMLInputElement;
+    if (hideCursorCheckbox) {
+      hideCursorCheckbox.addEventListener("change", () => {
+        this.settings.hideCursorWhileTyping = hideCursorCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
+    const blockPopupsCheckbox = this.shadowRoot.getElementById("tr-set-blockpopups") as HTMLInputElement;
+    if (blockPopupsCheckbox) {
+      blockPopupsCheckbox.addEventListener("change", () => {
+        this.settings.disableRacerPopupsDuringRace = blockPopupsCheckbox.checked;
+        this.saveSettings();
+      });
+    }
+
     const snappingCheckbox = this.shadowRoot.getElementById("tr-set-enablesnapping") as HTMLInputElement;
     if (snappingCheckbox) {
       snappingCheckbox.addEventListener("change", () => {
@@ -516,28 +568,12 @@ export class OverlayUI {
       });
     }
 
-    const autoTopBarCheckbox = this.shadowRoot.getElementById("tr-set-autohidetopbar") as HTMLInputElement;
-    if (autoTopBarCheckbox) {
-      autoTopBarCheckbox.addEventListener("change", () => {
-        this.settings.autoHideTopBar = autoTopBarCheckbox.checked;
-        this.saveSettings();
-      });
-    }
-
     const transparencyCheckbox = this.shadowRoot.getElementById("tr-set-transparency") as HTMLInputElement;
     if (transparencyCheckbox) {
       transparencyCheckbox.addEventListener("change", () => {
         this.settings.transparentOverlay = transparencyCheckbox.checked;
         const isSnapped = this.settings.snapMode && this.settings.snapMode !== "none";
         this.containerEl.classList.toggle("transparent", !isSnapped && this.settings.transparentOverlay);
-        this.saveSettings();
-      });
-    }
-
-    const wideModeCheckbox = this.shadowRoot.getElementById("tr-set-widemode") as HTMLInputElement;
-    if (wideModeCheckbox) {
-      wideModeCheckbox.addEventListener("change", () => {
-        this.settings.wideMode = wideModeCheckbox.checked;
         this.saveSettings();
       });
     }

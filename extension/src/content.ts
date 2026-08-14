@@ -24,6 +24,7 @@ class TypeRacerOverlayApp {
   private timerInterval: any = null;
   private activeUsername: string = "";
   private isQotdDoneFromApi: boolean = false;
+  private isRaceActive: boolean = false;
 
   constructor() {
     this.quoteStore = new QuoteStore();
@@ -42,6 +43,10 @@ class TypeRacerOverlayApp {
       this.applyUpsellsCleaner(settings.hideUpsells ?? true);
       this.applyTopBarAutoHide(settings.autoHideTopBar ?? false);
       this.applyWideMode(settings.wideMode ?? false);
+
+      if (!settings.disableRacerPopupsDuringRace && this.isRaceActive) {
+        document.documentElement.classList.remove("tr-suppress-racer-popups");
+      }
 
       if (settings.username && settings.username !== this.activeUsername) {
         this.handleUsernameChanged(settings.username);
@@ -63,6 +68,8 @@ class TypeRacerOverlayApp {
     this.applyUpsellsCleaner(initialSettings.hideUpsells ?? true);
     this.applyTopBarAutoHide(initialSettings.autoHideTopBar ?? false);
     this.applyWideMode(initialSettings.wideMode ?? false);
+    this.initTypingCursorHider();
+    this.initRacerTooltipSuppressor();
 
     // 4. Initialize Component Widgets
     this.quoteHistoryWidget = new QuoteHistoryWidget(this.ui.quoteWidgetEl);
@@ -108,6 +115,60 @@ class TypeRacerOverlayApp {
     console.log("[TypeRacer Overlay] Initialized successfully on *.typeracer.com!");
   }
 
+  private initTypingCursorHider(): void {
+    let style = document.getElementById("tr-typing-cursor-hider-style");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "tr-typing-cursor-hider-style";
+      style.textContent = `
+        /* Hide mouse cursor when typing on TypeRacer */
+        .tr-hide-cursor, .tr-hide-cursor * {
+          cursor: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    let isCursorHidden = false;
+
+    window.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (!this.ui.getSettings().hideCursorWhileTyping) return;
+      if (["Shift", "Control", "Alt", "Meta", "Escape", "Tab", "CapsLock"].includes(e.key)) return;
+      if (!isCursorHidden) {
+        document.documentElement.classList.add("tr-hide-cursor");
+        isCursorHidden = true;
+      }
+    }, true);
+
+    window.addEventListener("mousemove", () => {
+      if (isCursorHidden) {
+        document.documentElement.classList.remove("tr-hide-cursor");
+        isCursorHidden = false;
+      }
+    }, true);
+  }
+
+  private initRacerTooltipSuppressor(): void {
+    let style = document.getElementById("tr-racer-tooltip-suppressor-style");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "tr-racer-tooltip-suppressor-style";
+      style.textContent = `
+        /* Disable racer stats hover popups during race to avoid blocking text */
+        .tr-suppress-racer-popups .cursor-help,
+        .tr-suppress-racer-popups [class*="cursor-help"],
+        .tr-suppress-racer-popups .gwt-PopupPanel,
+        .tr-suppress-racer-popups div[class*="popup"],
+        .tr-suppress-racer-popups div[class*="tooltip"],
+        .tr-suppress-racer-popups div[class*="Tooltip"] {
+          pointer-events: none !important;
+          user-select: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
   private applyUpsellsCleaner(hideUpsells: boolean): void {
     let styleEl = document.getElementById("tr-clean-upsells-style");
 
@@ -138,14 +199,12 @@ class TypeRacerOverlayApp {
           .pitProfileHeader__premiumBadge,
           .rankTable-upsell,
           .profileTableHeader__premium,
-          .profileTable__row--upsell,
-          .b-premium-upsell,
-          .pt-16.justify-center.items-start.bg-black\\/50.flex.z-50.inset-0.fixed,
-          .fixed.inset-0.z-50.flex.bg-black\\/50.items-start.justify-center.pt-16,
-          div[class*="fixed"][class*="inset-0"][class*="z-50"][class*="bg-black/50"] {
+          div[class*="upsell"],
+          div[class*="adBanner"] {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
+            width: 0 !important;
             opacity: 0 !important;
             pointer-events: none !important;
           }
@@ -161,34 +220,39 @@ class TypeRacerOverlayApp {
 
   private applyTopBarAutoHide(autoHide: boolean): void {
     let styleEl = document.getElementById("tr-autohide-topbar-style");
+
     if (autoHide) {
       if (!styleEl) {
         styleEl = document.createElement("style");
         styleEl.id = "tr-autohide-topbar-style";
         styleEl.textContent = `
-          /* Auto-Hide TypeRacer Top Bar (Reveals on Hover) */
+          /* TypeRacer Auto-Hide Top Navigation Bar (Reveals on Hover) */
           header,
-          nav,
+          .top-bar,
           .header,
-          #header,
-          .gwt-MenuBar,
-          div[class*="Header"],
+          .nav-bar,
+          nav,
+          div[class*="header"],
+          div[class*="topbar"],
+          div[class*="TopBar"],
           div[class*="navbar"] {
             opacity: 0 !important;
-            max-height: 12px !important;
+            max-height: 8px !important;
             overflow: hidden !important;
             transition: opacity 0.25s ease, max-height 0.3s ease !important;
           }
+
           header:hover,
-          nav:hover,
+          .top-bar:hover,
           .header:hover,
-          #header:hover,
-          .gwt-MenuBar:hover,
-          div[class*="Header"]:hover,
+          .nav-bar:hover,
+          nav:hover,
+          div[class*="header"]:hover,
+          div[class*="topbar"]:hover,
+          div[class*="TopBar"]:hover,
           div[class*="navbar"]:hover {
             opacity: 1 !important;
-            max-height: 300px !important;
-            overflow: visible !important;
+            max-height: 120px !important;
           }
         `;
         document.head.appendChild(styleEl);
@@ -201,21 +265,29 @@ class TypeRacerOverlayApp {
   }
 
   private applyWideMode(wideMode: boolean): void {
-    let styleEl = document.getElementById("tr-widemode-style");
+    let styleEl = document.getElementById("tr-wide-mode-style");
+
     if (wideMode) {
       if (!styleEl) {
         styleEl = document.createElement("style");
-        styleEl.id = "tr-widemode-style";
+        styleEl.id = "tr-wide-mode-style";
         styleEl.textContent = `
-          /* TypeRacer Wide Track & Board Mode */
-          div.max-w-4xl,
+          /* TypeRacer Wide Track Mode (Wider track layout) */
+          .max-w-4xl,
           div[class*="max-w-4xl"],
-          div[class*="xl:mr-80"],
-          div[class*="2xl:mx-auto"] {
+          .main-content,
+          .racetrackContainer,
+          .main-view {
             max-width: 95vw !important;
-            width: 95% !important;
+            width: 95vw !important;
             margin-left: auto !important;
             margin-right: auto !important;
+          }
+          .xl\\:mr-80,
+          div[class*="xl:mr-80"],
+          div[class*="xl:ml-auto"] {
+            margin-right: auto !important;
+            margin-left: auto !important;
           }
         `;
         document.head.appendChild(styleEl);
@@ -227,34 +299,28 @@ class TypeRacerOverlayApp {
     }
   }
 
-  private async handleUsernameChanged(username: string): Promise<void> {
-    if (!username) return;
-    this.activeUsername = username;
-    this.ui.updateUsernameTitle(username);
+  private async handleUsernameChanged(newUsername: string): Promise<void> {
+    if (this.activeUsername === newUsername) return;
+    this.activeUsername = newUsername;
 
-    // Update settings if not set
-    const settings = this.ui.getSettings();
-    if (settings.username !== username) {
-      settings.username = username;
-      this.ui.saveSettings();
-    }
+    this.ui.updateUsernameTitle(newUsername);
 
-    // Fetch QOTD Status from API
-    this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(username);
+    // Fetch QOTD status from API
+    this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(newUsername);
 
-    // Sync user's real recent race history from TypeRacer API
-    await this.quoteStore.syncFromAPI(username);
+    // Sync full race history from API
+    await this.quoteStore.syncFromAPI(newUsername);
 
-    // Refresh overlay UI with synced data
+    // Refresh overlay UI
     await this.refreshOverlayData();
   }
 
-  private async refreshOverlayData(highlightNew = false): Promise<void> {
+  private async refreshOverlayData(highlightNew: boolean = false): Promise<void> {
     const races = await this.quoteStore.getRecentRaces(200);
+
+    // If quote banner is displayed, validate it only pertains to latest race
     if (races.length > 0) {
       this.quoteHistoryWidget.validateAgainstLatestRace(races[0].id);
-    } else {
-      this.quoteHistoryWidget.clear();
     }
 
     this.recentRacesWidget.render(races, highlightNew, this.activeUsername);
@@ -285,18 +351,25 @@ class TypeRacerOverlayApp {
   }
 
   private handleRaceStarted(): void {
-    // 1. Auto-minimize during race if enabled
+    this.isRaceActive = true;
+
+    // 1. Auto-minimize during race if enabled (floating mode only)
     if (this.ui.isAutoMinimizeEnabled()) {
       this.ui.setCollapsed(true);
     }
 
-    // 2. Clear old post-race quote comparison banner when starting next race
+    // 2. Suppress racer hover tooltips during race if setting enabled
+    if (this.ui.getSettings().disableRacerPopupsDuringRace) {
+      document.documentElement.classList.add("tr-suppress-racer-popups");
+    }
+
+    // 3. Clear old post-race quote comparison banner when starting next race
     this.quoteHistoryWidget.clear();
     this.currentQuoteRecord = null;
   }
 
   private async handleQuoteLoaded(textId: number, quoteText: string): Promise<void> {
-    // Auto-minimize during race if enabled
+    // Auto-minimize during race if enabled (floating mode only)
     if (this.ui.isAutoMinimizeEnabled()) {
       this.ui.setCollapsed(true);
     }
@@ -307,7 +380,11 @@ class TypeRacerOverlayApp {
   }
 
   private async handleRaceCompleted(race: ExtensionRace): Promise<void> {
+    this.isRaceActive = false;
     const username = this.activeUsername || "local_user";
+
+    // Restore racer tooltips on race completion
+    document.documentElement.classList.remove("tr-suppress-racer-popups");
 
     // Auto-expand overlay on race completion if auto-minimize was active
     if (this.ui.isAutoMinimizeEnabled()) {

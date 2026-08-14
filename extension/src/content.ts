@@ -25,7 +25,6 @@ class TypeRacerOverlayApp {
   private activeUsername: string = "";
   private isQotdDoneFromApi: boolean = false;
   private isRaceActive: boolean = false;
-  private lobbyObserver: MutationObserver | null = null;
 
   constructor() {
     this.quoteStore = new QuoteStore();
@@ -76,7 +75,6 @@ class TypeRacerOverlayApp {
     this.applyCompactLobbyButtons(initialSettings.compactLobbyButtons ?? false);
     this.initTypingCursorHider();
     this.initRacerTooltipSuppressor();
-    this.initLobbyObserver();
 
     // 4. Initialize Component Widgets
     this.quoteHistoryWidget = new QuoteHistoryWidget(this.ui.quoteWidgetEl);
@@ -244,19 +242,6 @@ class TypeRacerOverlayApp {
     }
   }
 
-  private initLobbyObserver(): void {
-    this.lobbyObserver = new MutationObserver(() => {
-      if (this.ui.getSettings().compactLobbyButtons) {
-        this.applyCompactLobbyButtons(true);
-      }
-    });
-
-    this.lobbyObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-  }
-
   private applyLobbySocialsCleaner(hideSocials: boolean): void {
     let styleEl = document.getElementById("tr-hide-lobby-socials-style");
 
@@ -336,21 +321,28 @@ class TypeRacerOverlayApp {
     let styleEl = document.getElementById("tr-compact-lobby-style");
 
     if (compact) {
+      document.documentElement.classList.add("tr-compact-lobby");
+      document.body.classList.add("tr-compact-lobby");
+
       if (!styleEl) {
         styleEl = document.createElement("style");
         styleEl.id = "tr-compact-lobby-style";
         styleEl.textContent = `
-          /* Side-by-Side Lobby & QOTD Action Cards Grid */
-          #tr-side-by-side-lobby-row {
+          /* Pure CSS Side-by-Side Lobby & QOTD Cards - Zero DOM Re-parenting (React Safe!) */
+          html.tr-compact-lobby div.relative.w-full.flex.flex-col.gap-4:has(div[style*="bg_qotd"]),
+          html.tr-compact-lobby div[class*="flex-col"]:has(> div[class*="bg-card-background"] div[style*="bg_qotd"]),
+          html.tr-compact-lobby div[class*="flex-col"]:has(> div[class*="bg-card-background"]:has(div[style*="bg_qotd"])) {
             display: grid !important;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
             gap: 16px !important;
-            width: 100% !important;
-            margin: 8px 0 !important;
             align-items: stretch !important;
           }
-          #tr-side-by-side-lobby-row > div {
+
+          html.tr-compact-lobby div[class*="bg-card-background"]:has(div[style*="bg_qotd"]),
+          html.tr-compact-lobby div[class*="bg-card-background"]:has(a[href*="discord"]),
+          html.tr-compact-lobby div[class*="bg-card-background"]:has(button) {
             height: 100% !important;
+            margin: 0 !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
@@ -358,45 +350,11 @@ class TypeRacerOverlayApp {
         `;
         document.head.appendChild(styleEl);
       }
-
-      // Locate QOTD full box card & Main race card
-      const qotdHeading = Array.from(document.querySelectorAll("h2, h3, p")).find(
-        (el) => el.textContent && /quote\s*of\s*the\s*day/i.test(el.textContent)
-      );
-      const qotdCard = (qotdHeading?.closest(
-        "div[class*='bg-card-background'], div[class*='rounded-lg'], div[class*='border-card-border']"
-      ) || document.querySelector("div[style*='bg_qotd']")) as HTMLElement | null;
-
-      const enterRaceBtn = Array.from(document.querySelectorAll("button, a")).find(
-        (b) => b.textContent && /enter\s*a\s*typing\s*race/i.test(b.textContent)
-      );
-      const raceCard = enterRaceBtn?.closest(
-        "div[class*='bg-card-background'], div[class*='rounded-lg'], div[class*='border-card-border'], .mainMenu"
-      ) as HTMLElement | null;
-
-      if (raceCard && qotdCard && raceCard !== qotdCard && raceCard.parentElement) {
-        let row = document.getElementById("tr-side-by-side-lobby-row");
-        if (!row) {
-          row = document.createElement("div");
-          row.id = "tr-side-by-side-lobby-row";
-          raceCard.parentElement.insertBefore(row, raceCard);
-          row.appendChild(raceCard);
-          row.appendChild(qotdCard);
-        } else if (!row.contains(raceCard) || !row.contains(qotdCard)) {
-          row.appendChild(raceCard);
-          row.appendChild(qotdCard);
-        }
-      }
     } else {
+      document.documentElement.classList.remove("tr-compact-lobby");
+      document.body.classList.remove("tr-compact-lobby");
       if (styleEl) {
         styleEl.remove();
-      }
-      const row = document.getElementById("tr-side-by-side-lobby-row");
-      if (row && row.parentElement) {
-        while (row.firstChild) {
-          row.parentElement.insertBefore(row.firstChild, row);
-        }
-        row.remove();
       }
     }
   }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TypeRacer Stats Overlay & Streak Tracker
 // @namespace    https://typeracer-stats.vercel.app/
-// @version      2.2.1
+// @version      2.3.0
 // @description  Live overlay on TypeRacer showing last 10 races, daily 10-race streak progress, QOTD timer, reset notification, quote performance comparison, and premium upsells cleaner.
 // @author       TypeRacer Stats V2 Team
 // @match        https://*.typeracer.com/*

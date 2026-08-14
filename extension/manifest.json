@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TypeRacer Stats Overlay",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Live overlay for TypeRacer with last 10 races history, daily streak progress, QOTD timer, 1h notification, and quote performance comparison.",
   "permissions": [
     "storage",

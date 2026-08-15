@@ -577,8 +577,12 @@ class TypeRacerOverlayApp {
     this.streakWidget.render(streakInfo);
 
     // Sync streak count to chrome storage for background alarm
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({ tr_races_today: streakInfo.racesDoneToday });
+    if (typeof chrome !== "undefined" && chrome.runtime?.id && chrome.storage?.local) {
+      try {
+        chrome.storage.local.set({ tr_races_today: streakInfo.racesDoneToday });
+      } catch {
+        // Context invalidated on extension reload
+      }
     }
 
     // Check if 1-hour prior notification is required
@@ -592,9 +596,18 @@ class TypeRacerOverlayApp {
   private startCountdownTimer(): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(async () => {
-      const races = await this.quoteStore.getRecentRaces(200);
-      const streakInfo = this.streakTracker.calculateStreakInfo(races, this.isQotdDoneFromApi);
-      this.streakWidget.render(streakInfo);
+      // If extension was reloaded in chrome://extensions, clear old timer safely
+      if (typeof chrome !== "undefined" && chrome.runtime && !chrome.runtime.id) {
+        clearInterval(this.timerInterval);
+        return;
+      }
+      try {
+        const races = await this.quoteStore.getRecentRaces(200);
+        const streakInfo = this.streakTracker.calculateStreakInfo(races, this.isQotdDoneFromApi);
+        this.streakWidget.render(streakInfo);
+      } catch {
+        // Context invalidated
+      }
     }, 1000);
   }
 

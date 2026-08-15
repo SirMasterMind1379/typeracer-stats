@@ -142,41 +142,69 @@ async function checkQOTDForUser(username: string): Promise<boolean> {
     const now = new Date();
     const today00UTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-    // 1. Check API Competitions for universe=play
-    const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=play&date=${todayStr}`);
-    if (compRes.ok) {
-      const comps = await compRes.json();
-      const compList = Array.isArray(comps) ? comps : [];
-      if (compList.length > 0 && compList[0].uid) {
-        const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`);
-        if (resRes.ok) {
-          const results = await resRes.json();
-          const list = Array.isArray(results) ? results : [];
-          if (list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase())) {
+    // 1. Check QOTD API Races for today in universe=qotd
+    try {
+      const qotdApiRes = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=qotd&n=5`);
+      if (qotdApiRes.ok) {
+        const qRaces = await qotdApiRes.json();
+        if (Array.isArray(qRaces) && qRaces.length > 0) {
+          const parsed = qRaces.map(parseApiRace);
+          if (parsed.some((r) => r.timestamp >= today00UTC)) {
             return true;
           }
         }
       }
+    } catch {
+      // ignore
     }
 
-    // 2. Check API Competitions for universe=qotd
-    const qotdRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=qotd&date=${todayStr}`);
-    if (qotdRes.ok) {
-      const comps = await qotdRes.json();
-      const compList = Array.isArray(comps) ? comps : [];
-      if (compList.length > 0 && compList[0].uid) {
-        const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`);
-        if (resRes.ok) {
-          const results = await resRes.json();
-          const list = Array.isArray(results) ? results : [];
-          if (list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase())) {
-            return true;
+    // 2. Check API Competitions for universe=play and universe=qotd
+    for (const uni of ["play", "qotd"]) {
+      try {
+        const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=${uni}&date=${todayStr}`);
+        if (compRes.ok) {
+          const comps = await compRes.json();
+          const compList = Array.isArray(comps) ? comps : [];
+          if (compList.length > 0 && compList[0].uid) {
+            const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`);
+            if (resRes.ok) {
+              const results = await resRes.json();
+              const list = Array.isArray(results) ? results : [];
+              if (list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase())) {
+                return true;
+              }
+            }
           }
         }
+      } catch {
+        // ignore
       }
     }
 
-    // 3. Check fetched races in case user completed QOTD race today in UTC
+    // 3. Check Pit Race History page for recent Quote of the Day rows today
+    try {
+      const pitRes = await fetch(`https://data.typeracer.com/pit/race_history?user=${encodeURIComponent(username)}&n=15`);
+      if (pitRes.ok) {
+        const html = await pitRes.text();
+        const rows = [...html.matchAll(/<div class="Scores__Table__Row">([\s\S]*?)<\/div>\s*<\/div>/g)];
+        for (const r of rows) {
+          const content = r[1];
+          const dateMatch = content.match(/profileTableHeaderDate">[\s\S]*?([A-Z][a-z]{2}\s+\d+,\s+\d{4})/i);
+          const modeMatch = content.match(/profileTableHeaderRaces">[\s\S]*?([A-Za-z0-9\s]+)/i);
+          if (dateMatch && modeMatch) {
+            const ts = new Date(dateMatch[1]).getTime();
+            const mode = modeMatch[1].trim().toLowerCase();
+            if (ts >= today00UTC && (mode.includes("quote") || mode.includes("qotd"))) {
+              return true;
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 4. Check fetched general user races for QOTD today
     const userRaces = await fetchRacesForUser(username);
     if (userRaces.some((r) => r.timestamp >= today00UTC && r.mode?.toLowerCase().includes("qotd"))) {
       return true;

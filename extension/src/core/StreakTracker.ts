@@ -106,8 +106,8 @@ export class StreakTracker {
 
     const qotdDone = qotdDoneOverride || todayRaces.some((r) => r.mode?.toLowerCase().includes("qotd"));
 
-    // Calculate Best WPM Today across all races today
-    const wpmsToday = todayRaces.map((r) => r.wpm).filter((w) => typeof w === "number" && !isNaN(w) && w > 0);
+    // Calculate Best WPM Today across multiplayer races completed today
+    const wpmsToday = todayMultiplayerRaces.map((r) => r.wpm).filter((w) => typeof w === "number" && !isNaN(w) && w > 0);
     const bestWpmToday = wpmsToday.length > 0 ? Math.max(...wpmsToday) : null;
 
     const secondsUntilReset = this.getSecondsUntilReset();

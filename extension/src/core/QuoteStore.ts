@@ -117,12 +117,16 @@ export class QuoteStore {
   }
 
   public async saveRace(race: ExtensionRace, username: string = "local_user"): Promise<void> {
-    if (!this.recentRacesMemory.some((r) => r.id === race.id)) {
+    const existingIndex = this.recentRacesMemory.findIndex((r) => r.id === race.id);
+    if (existingIndex >= 0) {
+      this.recentRacesMemory[existingIndex] = race;
+    } else {
       this.recentRacesMemory.unshift(race);
       if (this.recentRacesMemory.length > 50) {
         this.recentRacesMemory.pop();
       }
     }
+    this.recentRacesMemory.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     try {
       const db = await this.initDB();
@@ -166,10 +170,14 @@ export class QuoteStore {
     // Save to localStorage as quick fallback
     try {
       const stored = JSON.parse(localStorage.getItem("tr_overlay_recent_races") || "[]");
-      if (!stored.some((r: any) => r.id === race.id)) {
+      const idx = stored.findIndex((r: any) => r.id === race.id);
+      if (idx >= 0) {
+        stored[idx] = race;
+      } else {
         stored.unshift(race);
-        localStorage.setItem("tr_overlay_recent_races", JSON.stringify(stored.slice(0, 50)));
       }
+      stored.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+      localStorage.setItem("tr_overlay_recent_races", JSON.stringify(stored.slice(0, 50)));
     } catch {
       // Fallback ignore
     }
@@ -228,12 +236,14 @@ export class QuoteStore {
       return this.recentRacesMemory.slice(0, limit);
     }
 
-    // Try localStorage fallback first (Instant on browser reload)
+    // Try localStorage fallback (Instant on browser reload)
     try {
-      const stored: ExtensionRace[] = JSON.parse(localStorage.getItem("tr_overlay_recent_races") || "[]");
-      if (stored.length > 0) {
-        this.recentRacesMemory = stored;
-        return stored.slice(0, limit);
+      const stored = JSON.parse(localStorage.getItem("tr_overlay_recent_races") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) {
+        const parsed = stored.map(parseApiRace);
+        parsed.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        this.recentRacesMemory = parsed;
+        return parsed.slice(0, limit);
       }
     } catch {
       // ignore

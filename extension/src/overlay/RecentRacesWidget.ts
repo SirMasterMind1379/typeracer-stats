@@ -59,7 +59,7 @@ export class RecentRacesWidget {
     const minWpm = Math.max(0, rawMin - margin);
     const avgWpmVal = (wpms.reduce((a, b) => a + b, 0) / wpms.length).toFixed(1);
 
-    // SVG Line Chart Dimensions (Vertically expanded)
+    // SVG Line Chart Dimensions
     const svgWidth = 280;
     const svgHeight = 105;
     const paddingX = 16;
@@ -134,7 +134,7 @@ export class RecentRacesWidget {
     const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
     const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)},${svgHeight} L ${points[0].x.toFixed(1)},${svgHeight} Z`;
 
-    // Data Point Circle Markers & Labels (Clickable Links with 1 decimal place)
+    // Data Point Circle Markers & Labels
     const circlesSvg = points.map((p) => {
       const circleR = p.isNewest ? 4.5 : 3.5;
       const strokeW = p.isNewest ? 2 : 1.5;

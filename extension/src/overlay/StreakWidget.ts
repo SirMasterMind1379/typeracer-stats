@@ -20,6 +20,25 @@ export class StreakWidget {
 
     const bestTodayText = info.bestWpmToday != null ? `Best Today: <strong>${info.bestWpmToday.toFixed(1)} WPM</strong>` : "Best Today: --";
 
+    // If card already exists, update elements in place to prevent layout blink
+    const streakValEl = this.container.querySelector(".tr-streak-val");
+    const progressFillEl = this.container.querySelector(".tr-progress-fill") as HTMLElement | null;
+    const badgeEl = this.container.querySelector(".tr-badge");
+    const timerEl = this.container.querySelector(".tr-timer");
+    const bestEl = this.container.querySelector("#tr-best-today-label");
+
+    if (streakValEl && progressFillEl && badgeEl && timerEl && bestEl) {
+      streakValEl.className = valClass;
+      streakValEl.textContent = `${info.racesDoneToday} / ${info.targetDaily}`;
+      progressFillEl.className = fillClass;
+      progressFillEl.style.width = `${pct}%`;
+      badgeEl.className = info.qotdDone ? "tr-badge done" : "tr-badge pending";
+      badgeEl.textContent = info.qotdDone ? "Completed ✓" : "Pending ❌";
+      timerEl.textContent = info.formattedCountdown;
+      bestEl.innerHTML = bestTodayText;
+      return;
+    }
+
     this.container.innerHTML = `
       <div class="tr-card">
         <div class="tr-streak-header">
@@ -37,7 +56,7 @@ export class StreakWidget {
             ${qotdBadge}
           </div>
           <div class="tr-status-row">
-            <span style="font-size: 11px; color: #fbbf24;">${bestTodayText}</span>
+            <span style="font-size: 11px; color: #fbbf24;" id="tr-best-today-label">${bestTodayText}</span>
             <span class="tr-timer">${info.formattedCountdown}</span>
           </div>
         </div>

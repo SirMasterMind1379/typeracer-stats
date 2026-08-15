@@ -12,6 +12,27 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// Open or Focus TypeRacer tab when extension toolbar icon is clicked
+if (typeof chrome !== "undefined" && chrome.action && chrome.action.onClicked) {
+  chrome.action.onClicked.addListener(async () => {
+    try {
+      const tabs = await chrome.tabs.query({ url: "*://play.typeracer.com/*" });
+      if (tabs.length > 0 && tabs[0].id) {
+        await chrome.tabs.update(tabs[0].id, { active: true });
+        if (tabs[0].windowId) {
+          await chrome.windows.update(tabs[0].windowId, { focused: true });
+        }
+      } else {
+        await chrome.tabs.create({ url: "https://play.typeracer.com" });
+      }
+    } catch (err) {
+      console.warn("[Background] Failed to handle toolbar icon click:", err);
+      // Fallback create tab
+      chrome.tabs.create({ url: "https://play.typeracer.com" });
+    }
+  });
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || !message.type) return false;
 
@@ -119,7 +140,7 @@ async function checkQOTDForUser(username: string): Promise<boolean> {
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    // 1. Check API Competitions
+    // Check API Competitions for today (resetting at 00:00 UTC / 8:00 PM EDT)
     const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=play&date=${todayStr}`);
     if (compRes.ok) {
       const comps = await compRes.json();
@@ -135,19 +156,11 @@ async function checkQOTDForUser(username: string): Promise<boolean> {
         }
       }
     }
-
-    // 2. Check Pit Profile Page for QOTD Badges or recent activity
-    const profileRes = await fetch(`https://data.typeracer.com/pit/profile?user=${encodeURIComponent(username)}`);
-    if (profileRes.ok) {
-      const html = await profileRes.text();
-      if (html.includes('data-badge="qotd_') || html.includes('Quote of the Day')) {
-        return true;
-      }
-    }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.warn("[Background] QOTD competition check error:", err);
   }
 
+  // Strictly do NOT fallback to static profile badges which cause false positives
   return false;
 }
 

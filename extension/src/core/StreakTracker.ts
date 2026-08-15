@@ -92,7 +92,7 @@ export class StreakTracker {
   public calculateStreakInfo(races: ExtensionRace[], qotdDoneOverride = false): StreakInfo {
     const today00UTC = getToday00UTC();
 
-    // Filter races completed today in UTC (since 00:00 UTC)
+    // Filter races completed today in UTC (since 00:00 UTC / 8:00 PM EDT)
     const todayRaces = races.filter((r) => {
       const ts = typeof r.timestamp === "number" ? r.timestamp : 0;
       return ts >= today00UTC;

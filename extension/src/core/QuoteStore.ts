@@ -177,12 +177,45 @@ export class QuoteStore {
 
   public async getQuoteHistory(textId: number): Promise<QuoteHistoryRecord | null> {
     if (!textId) return null;
+
     try {
       const db = await this.initDB();
+
       return new Promise((resolve) => {
-        const tx = db.transaction(STORE_QUOTES, "readonly");
-        const req = tx.objectStore(STORE_QUOTES).get(textId);
-        req.onsuccess = () => resolve(req.result || null);
+        const tx = db.transaction([STORE_RACES, STORE_QUOTES], "readonly");
+        const raceStore = tx.objectStore(STORE_RACES);
+        const index = raceStore.index("textId");
+        const req = index.getAll(textId);
+
+        req.onsuccess = () => {
+          const races: ExtensionRace[] = req.result || [];
+          if (races.length > 0) {
+            // Sort chronologically (oldest to newest)
+            races.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            const wpms = races.map((r) => r.wpm).filter((w) => w > 0);
+            const accuracies = races.map((r) => r.accuracy ?? 98.0);
+            const bestSpeed = Math.max(...wpms, 0);
+            const lastRace = races[races.length - 1];
+
+            const record: QuoteHistoryRecord = {
+              textId,
+              quoteText: "",
+              timesTyped: races.length,
+              lastSpeed: lastRace.wpm,
+              lastAccuracy: lastRace.accuracy ?? 98.0,
+              bestSpeed,
+              lastDate: lastRace.dateStr,
+            };
+            resolve(record);
+          } else {
+            // Fallback check in quotes_history table
+            const qStore = tx.objectStore(STORE_QUOTES);
+            const qReq = qStore.get(textId);
+            qReq.onsuccess = () => resolve(qReq.result || null);
+            qReq.onerror = () => resolve(null);
+          }
+        };
+
         req.onerror = () => resolve(null);
       });
     } catch {

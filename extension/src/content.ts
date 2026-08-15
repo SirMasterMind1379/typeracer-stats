@@ -25,11 +25,25 @@ class TypeRacerOverlayApp {
   private activeUsername: string = "";
   private isQotdDoneFromApi: boolean = false;
   private isRaceActive: boolean = false;
+  private broadcastChannel: BroadcastChannel | null = null;
 
   constructor() {
     this.quoteStore = new QuoteStore();
     this.streakTracker = new StreakTracker();
     this.notifier = new Notifier();
+
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        this.broadcastChannel = new BroadcastChannel("tr_overlay_sync");
+        this.broadcastChannel.onmessage = (e) => {
+          if (e.data?.type === "RACE_COMPLETED" || e.data?.type === "STATS_REFRESH") {
+            this.refreshOverlayData(false);
+          }
+        };
+      } catch {
+        // BroadcastChannel unavailable
+      }
+    }
 
     this.init();
   }
@@ -62,11 +76,15 @@ class TypeRacerOverlayApp {
         this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(user);
       }
       await this.refreshOverlayData(true);
+      if (this.broadcastChannel) {
+        this.broadcastChannel.postMessage({ type: "STATS_REFRESH" });
+      }
     });
 
     // 3. Apply Initial Page Enhancements & Settings
     const initialSettings = this.ui.getSettings();
     this.initDockingStyles();
+    this.initThemeScrollbars();
     this.applyUpsellsCleaner(initialSettings.hideUpsells ?? true);
     this.applyTopBarAutoHide(initialSettings.autoHideTopBar ?? false);
     this.applyWideMode(initialSettings.wideMode ?? false);
@@ -138,28 +156,62 @@ class TypeRacerOverlayApp {
     console.log("[TypeRacer Overlay] Initialized successfully on *.typeracer.com!");
   }
 
+  private initThemeScrollbars(): void {
+    let style = document.getElementById("tr-theme-scrollbars-style");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "tr-theme-scrollbars-style";
+      style.textContent = `
+        /* Match Website Scrollbars to Active TypeRacer Theme */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: var(--color-background, var(--background, rgba(0, 0, 0, 0.2)));
+        }
+        ::-webkit-scrollbar-thumb {
+          background: var(--color-card-border, var(--border, rgba(128, 128, 128, 0.4)));
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: var(--color-brand-primary, var(--brand, rgba(239, 68, 68, 0.8)));
+        }
+
+        /* Firefox native scrollbar theme colors */
+        html, body, * {
+          scrollbar-width: thin;
+          scrollbar-color: var(--color-card-border, rgba(128, 128, 128, 0.4)) var(--color-background, transparent);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
   private initDockingStyles(): void {
     let style = document.getElementById("tr-docking-layout-style");
     if (!style) {
       style = document.createElement("style");
       style.id = "tr-docking-layout-style";
       style.textContent = `
-        /* Dynamic Docking Layout Adjustment Styles with 16px Natural Breathing Gap */
+        /* Dynamic Docking Layout Adjustment Styles with 16px Natural Breathing Gap and Zero Horizontal Overflow */
         html.tr-docked-left, body.tr-docked-left {
           margin-left: calc(var(--tr-dock-width, 360px) + 16px) !important;
           margin-right: 0 !important;
-          width: calc(100vw - var(--tr-dock-width, 360px) - 16px) !important;
-          max-width: calc(100vw - var(--tr-dock-width, 360px) - 16px) !important;
+          width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
+          max-width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
           box-sizing: border-box !important;
+          overflow-x: hidden !important;
           transition: margin 0.15s ease, width 0.15s ease !important;
         }
 
         html.tr-docked-right, body.tr-docked-right {
           margin-right: calc(var(--tr-dock-width, 360px) + 16px) !important;
           margin-left: 0 !important;
-          width: calc(100vw - var(--tr-dock-width, 360px) - 16px) !important;
-          max-width: calc(100vw - var(--tr-dock-width, 360px) - 16px) !important;
+          width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
+          max-width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
           box-sizing: border-box !important;
+          overflow-x: hidden !important;
           transition: margin 0.15s ease, width 0.15s ease !important;
         }
 
@@ -178,6 +230,7 @@ class TypeRacerOverlayApp {
           max-width: 100% !important;
           width: 100% !important;
           box-sizing: border-box !important;
+          overflow-x: hidden !important;
         }
 
         /* Center content nicely without forcing wide mode expansion when Wide Mode is OFF */
@@ -185,7 +238,7 @@ class TypeRacerOverlayApp {
         html.tr-docked-left:not(.tr-wide-mode) div[class*="max-w-4xl"],
         html.tr-docked-right:not(.tr-wide-mode) .max-w-4xl,
         html.tr-docked-right:not(.tr-wide-mode) div[class*="max-w-4xl"] {
-          max-width: min(56rem, calc(100vw - var(--tr-dock-width, 360px) - 32px)) !important;
+          max-width: min(56rem, calc(100% - var(--tr-dock-width, 360px) - 32px)) !important;
           width: 100% !important;
           margin-left: auto !important;
           margin-right: auto !important;
@@ -464,7 +517,7 @@ class TypeRacerOverlayApp {
         styleEl = document.createElement("style");
         styleEl.id = "tr-wide-mode-style";
         styleEl.textContent = `
-          /* TypeRacer Wide Track Mode (Expands fully across available space without going under extension) */
+          /* TypeRacer Wide Track Mode (Expands fully across available space without horizontal overflow) */
           html.tr-wide-mode .max-w-4xl,
           html.tr-wide-mode div[class*="max-w-4xl"],
           html.tr-wide-mode .main-content,
@@ -477,10 +530,11 @@ class TypeRacerOverlayApp {
           .main-content,
           .racetrackContainer,
           .main-view {
-            max-width: calc(100vw - var(--tr-dock-width, 0px) - 32px) !important;
-            width: calc(100vw - var(--tr-dock-width, 0px) - 32px) !important;
+            max-width: calc(100% - var(--tr-dock-width, 0px) - 32px) !important;
+            width: calc(100% - var(--tr-dock-width, 0px) - 32px) !important;
             margin-left: auto !important;
             margin-right: auto !important;
+            box-sizing: border-box !important;
           }
           .xl\\:mr-80,
           div[class*="xl:mr-80"],
@@ -586,7 +640,7 @@ class TypeRacerOverlayApp {
       this.ui.setCollapsed(true);
     }
 
-    // Look up previous record for this text
+    // Look up previous record for this text across full historical races in IndexedDB
     this.currentQuoteRecord = await this.quoteStore.getQuoteHistory(textId);
     this.quoteHistoryWidget.renderPreRaceQuote(this.currentQuoteRecord, quoteText);
   }
@@ -617,7 +671,12 @@ class TypeRacerOverlayApp {
     // 4. Auto-refresh recent races list & streak widget with smooth animation
     await this.refreshOverlayData(true);
 
-    // 5. Sync from API in background to ensure 100% server sync
+    // 5. Broadcast to other open tabs
+    if (this.broadcastChannel) {
+      this.broadcastChannel.postMessage({ type: "RACE_COMPLETED", race });
+    }
+
+    // 6. Sync from API in background to ensure 100% server sync
     if (username && username !== "local_user") {
       setTimeout(() => {
         this.quoteStore.syncFromAPI(username).then(() => {

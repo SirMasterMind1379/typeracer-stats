@@ -223,15 +223,15 @@ export class OverlayUI {
       document.body.classList.add("tr-docked-left");
       document.body.style.marginLeft = `${totalOffset}px`;
       document.body.style.marginRight = "0px";
-      document.body.style.width = `calc(100vw - ${totalOffset}px)`;
-      document.body.style.maxWidth = `calc(100vw - ${totalOffset}px)`;
+      document.body.style.width = `calc(100% - ${totalOffset}px)`;
+      document.body.style.maxWidth = `calc(100% - ${totalOffset}px)`;
     } else {
       document.documentElement.classList.add("tr-docked-right");
       document.body.classList.add("tr-docked-right");
       document.body.style.marginRight = `${totalOffset}px`;
       document.body.style.marginLeft = "0px";
-      document.body.style.width = `calc(100vw - ${totalOffset}px)`;
-      document.body.style.maxWidth = `calc(100vw - ${totalOffset}px)`;
+      document.body.style.width = `calc(100% - ${totalOffset}px)`;
+      document.body.style.maxWidth = `calc(100% - ${totalOffset}px)`;
     }
   }
 

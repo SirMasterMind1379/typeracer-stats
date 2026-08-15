@@ -195,24 +195,31 @@ class TypeRacerOverlayApp {
       style.id = "tr-docking-layout-style";
       style.textContent = `
         /* Dynamic Docking Layout Adjustment Styles with 16px Natural Breathing Gap and Zero Horizontal Overflow */
-        html.tr-docked-left, body.tr-docked-left {
+        body.tr-docked-left {
           margin-left: calc(var(--tr-dock-width, 360px) + 16px) !important;
-          margin-right: 0 !important;
-          width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
-          max-width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
+          margin-right: 16px !important;
+          width: calc(100vw - var(--tr-dock-width, 360px) - 32px) !important;
+          max-width: calc(100vw - var(--tr-dock-width, 360px) - 32px) !important;
           box-sizing: border-box !important;
           overflow-x: hidden !important;
           transition: margin 0.15s ease, width 0.15s ease !important;
         }
 
-        html.tr-docked-right, body.tr-docked-right {
+        body.tr-docked-right {
           margin-right: calc(var(--tr-dock-width, 360px) + 16px) !important;
-          margin-left: 0 !important;
-          width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
-          max-width: calc(100% - var(--tr-dock-width, 360px) - 16px) !important;
+          margin-left: 16px !important;
+          width: calc(100vw - var(--tr-dock-width, 360px) - 32px) !important;
+          max-width: calc(100vw - var(--tr-dock-width, 360px) - 32px) !important;
           box-sizing: border-box !important;
           overflow-x: hidden !important;
           transition: margin 0.15s ease, width 0.15s ease !important;
+        }
+
+        html.tr-docked-left, html.tr-docked-right {
+          overflow-x: hidden !important;
+          margin: 0 !important;
+          width: 100% !important;
+          max-width: 100% !important;
         }
 
         html.tr-docked-left #root,
@@ -233,12 +240,25 @@ class TypeRacerOverlayApp {
           overflow-x: hidden !important;
         }
 
-        /* Center content nicely without forcing wide mode expansion when Wide Mode is OFF */
-        html.tr-docked-left:not(.tr-wide-mode) .max-w-4xl,
-        html.tr-docked-left:not(.tr-wide-mode) div[class*="max-w-4xl"],
-        html.tr-docked-right:not(.tr-wide-mode) .max-w-4xl,
-        html.tr-docked-right:not(.tr-wide-mode) div[class*="max-w-4xl"] {
-          max-width: min(56rem, calc(100% - var(--tr-dock-width, 360px) - 32px)) !important;
+        /* Center content keeping full 56rem standard size when Wide Mode is OFF */
+        html:not(.tr-wide-mode) .max-w-4xl,
+        html:not(.tr-wide-mode) div[class*="max-w-4xl"] {
+          max-width: min(56rem, 100%) !important;
+          width: 100% !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+          box-sizing: border-box !important;
+        }
+
+        /* Expand completely to the bounds of available space when Wide Mode is ON */
+        html.tr-wide-mode .max-w-4xl,
+        html.tr-wide-mode div[class*="max-w-4xl"],
+        html.tr-wide-mode .main-content,
+        html.tr-wide-mode .racetrackContainer,
+        html.tr-wide-mode .main-view,
+        html.tr-wide-mode div[class*="main-content"],
+        html.tr-wide-mode div[class*="racetrackContainer"] {
+          max-width: 100% !important;
           width: 100% !important;
           margin-left: auto !important;
           margin-right: auto !important;
@@ -507,50 +527,12 @@ class TypeRacerOverlayApp {
   }
 
   private applyWideMode(wideMode: boolean): void {
-    let styleEl = document.getElementById("tr-wide-mode-style");
-
     if (wideMode) {
       document.documentElement.classList.add("tr-wide-mode");
       document.body.classList.add("tr-wide-mode");
-
-      if (!styleEl) {
-        styleEl = document.createElement("style");
-        styleEl.id = "tr-wide-mode-style";
-        styleEl.textContent = `
-          /* TypeRacer Wide Track Mode (Expands fully across available space without horizontal overflow) */
-          html.tr-wide-mode .max-w-4xl,
-          html.tr-wide-mode div[class*="max-w-4xl"],
-          html.tr-wide-mode .main-content,
-          html.tr-wide-mode .racetrackContainer,
-          html.tr-wide-mode .main-view,
-          html.tr-wide-mode div[class*="main-content"],
-          html.tr-wide-mode div[class*="racetrackContainer"],
-          .max-w-4xl,
-          div[class*="max-w-4xl"],
-          .main-content,
-          .racetrackContainer,
-          .main-view {
-            max-width: calc(100% - var(--tr-dock-width, 0px) - 32px) !important;
-            width: calc(100% - var(--tr-dock-width, 0px) - 32px) !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            box-sizing: border-box !important;
-          }
-          .xl\\:mr-80,
-          div[class*="xl:mr-80"],
-          div[class*="xl:ml-auto"] {
-            margin-right: auto !important;
-            margin-left: auto !important;
-          }
-        `;
-        document.head.appendChild(styleEl);
-      }
     } else {
       document.documentElement.classList.remove("tr-wide-mode");
       document.body.classList.remove("tr-wide-mode");
-      if (styleEl) {
-        styleEl.remove();
-      }
     }
   }
 

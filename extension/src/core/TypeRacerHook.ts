@@ -153,6 +153,15 @@ export class TypeRacerHook {
 
         const ts = item.t ? (typeof item.t === "number" && item.t < 1e12 ? item.t * 1000 : Number(item.t)) : Date.now();
 
+        const isQotdItem =
+          (item.gn && String(item.gn).toLowerCase().includes("qotd")) ||
+          (item.mode && String(item.mode).toLowerCase().includes("qotd")) ||
+          (item.universe && String(item.universe).toLowerCase().includes("qotd"));
+
+        const mode = isQotdItem
+          ? "qotd"
+          : item.gn || item.mode || (item.universe === "play" ? "multiplayer" : item.universe) || "multiplayer";
+
         const race: ExtensionRace = {
           id: raceId,
           textId: item.tid || this.currentTextId || 0,
@@ -163,7 +172,7 @@ export class TypeRacerHook {
           racers: item.nr || 5,
           timestamp: ts,
           dateStr: formatDisplayDate(ts),
-          mode: item.gn || item.mode || "multiplayer",
+          mode,
         };
         this.events.onRaceCompleted(race);
       }
@@ -279,6 +288,19 @@ export class TypeRacerHook {
             const numId = typeof raceId === "number" ? raceId : parseInt(String(raceId).replace(/\D/g, ""), 10) || Date.now();
             const now = Date.now();
 
+            const isQotd =
+              window.location.href.includes("universe=qotd") ||
+              window.location.href.includes("qotd") ||
+              document.title.toLowerCase().includes("quote of the day") ||
+              (document.querySelector(".mainMenu, .gameView, div[class*='bg-card-background']")?.textContent?.toLowerCase().includes("quote of the day") ?? false);
+
+            const isPractice =
+              window.location.href.includes("universe=practice") ||
+              window.location.href.includes("practice") ||
+              document.title.toLowerCase().includes("practice");
+
+            const mode = isQotd ? "qotd" : isPractice ? "practice" : "multiplayer";
+
             const race: ExtensionRace = {
               id: numId,
               textId: this.currentTextId,
@@ -289,7 +311,7 @@ export class TypeRacerHook {
               racers: 5,
               timestamp: now,
               dateStr: formatDisplayDate(now),
-              mode: "multiplayer",
+              mode,
             };
 
             this.events.onRaceCompleted(race);

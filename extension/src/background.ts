@@ -139,8 +139,10 @@ async function checkQOTDForUser(username: string): Promise<boolean> {
   if (!username) return false;
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today00UTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-    // Check API Competitions for today (resetting at 00:00 UTC / 8:00 PM EDT)
+    // 1. Check API Competitions for universe=play
     const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=play&date=${todayStr}`);
     if (compRes.ok) {
       const comps = await compRes.json();
@@ -156,11 +158,33 @@ async function checkQOTDForUser(username: string): Promise<boolean> {
         }
       }
     }
+
+    // 2. Check API Competitions for universe=qotd
+    const qotdRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=qotd&date=${todayStr}`);
+    if (qotdRes.ok) {
+      const comps = await qotdRes.json();
+      const compList = Array.isArray(comps) ? comps : [];
+      if (compList.length > 0 && compList[0].uid) {
+        const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`);
+        if (resRes.ok) {
+          const results = await resRes.json();
+          const list = Array.isArray(results) ? results : [];
+          if (list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase())) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // 3. Check fetched races in case user completed QOTD race today in UTC
+    const userRaces = await fetchRacesForUser(username);
+    if (userRaces.some((r) => r.timestamp >= today00UTC && r.mode?.toLowerCase().includes("qotd"))) {
+      return true;
+    }
   } catch (err) {
     console.warn("[Background] QOTD competition check error:", err);
   }
 
-  // Strictly do NOT fallback to static profile badges which cause false positives
   return false;
 }
 

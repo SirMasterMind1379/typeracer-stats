@@ -88,20 +88,38 @@ export function formatDisplayDate(dateInput: string | number | Date): string {
 }
 
 export function parseApiRace(raw: any): ExtensionRace {
-  const gn = raw.gn || raw.id || 0;
+  const gn = raw.gn || raw.id || raw.rid || 0;
   const wpm = typeof raw.wpm === "number" ? raw.wpm : typeof raw.speed === "number" ? raw.speed : 0;
   const textId = raw.tid || raw.textId || 0;
-  const timestamp = typeof raw.t === "number" ? (raw.t > 1e11 ? raw.t : raw.t * 1000) : Date.now();
+
+  let timestamp = Date.now();
+  if (typeof raw.t === "number") {
+    timestamp = raw.t > 1e11 ? raw.t : raw.t * 1000;
+  } else if (typeof raw.timestamp === "number") {
+    timestamp = raw.timestamp > 1e11 ? raw.timestamp : raw.timestamp * 1000;
+  } else if (raw.t && !isNaN(Number(raw.t))) {
+    const n = Number(raw.t);
+    timestamp = n > 1e11 ? n : n * 1000;
+  } else if (raw.date) {
+    const parsed = new Date(raw.date).getTime();
+    if (!isNaN(parsed)) timestamp = parsed;
+  } else if (raw.t && typeof raw.t === "string") {
+    const parsed = new Date(raw.t).getTime();
+    if (!isNaN(parsed)) timestamp = parsed;
+  }
+
   const dateStr = formatDisplayDate(timestamp);
   const accuracy =
     typeof raw.ac === "number"
       ? Math.round(raw.ac * 1000) / 10
       : typeof raw.accuracy === "number"
       ? raw.accuracy
+      : typeof raw.acc === "number"
+      ? Math.round(raw.acc * 1000) / 10
       : undefined;
   const rank = raw.r || raw.rank || undefined;
   const racers = raw.nr || raw.racers || undefined;
-  const mode = raw.mode || (raw.universe === "play" ? "multiplayer" : raw.universe) || "multiplayer";
+  const mode = raw.mode || raw.gn_mode || (raw.universe === "play" ? "multiplayer" : raw.universe) || "multiplayer";
   const points = raw.pts || raw.points || undefined;
 
   return {

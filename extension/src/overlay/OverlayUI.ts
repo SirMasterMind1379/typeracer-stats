@@ -215,23 +215,12 @@ export class OverlayUI {
     document.documentElement.style.setProperty("--tr-dock-width", `${width}px`);
     document.body.style.setProperty("--tr-dock-width", `${width}px`);
 
-    const gap = 16;
-    const totalOffset = width + gap;
-
     if (side === "left") {
       document.documentElement.classList.add("tr-docked-left");
       document.body.classList.add("tr-docked-left");
-      document.body.style.marginLeft = `${totalOffset}px`;
-      document.body.style.marginRight = "0px";
-      document.body.style.width = `calc(100% - ${totalOffset}px)`;
-      document.body.style.maxWidth = `calc(100% - ${totalOffset}px)`;
     } else {
       document.documentElement.classList.add("tr-docked-right");
       document.body.classList.add("tr-docked-right");
-      document.body.style.marginRight = `${totalOffset}px`;
-      document.body.style.marginLeft = "0px";
-      document.body.style.width = `calc(100% - ${totalOffset}px)`;
-      document.body.style.maxWidth = `calc(100% - ${totalOffset}px)`;
     }
   }
 
@@ -240,10 +229,6 @@ export class OverlayUI {
     document.body.classList.remove("tr-docked-left", "tr-docked-right");
     document.documentElement.style.removeProperty("--tr-dock-width");
     document.body.style.removeProperty("--tr-dock-width");
-    document.body.style.marginLeft = "";
-    document.body.style.marginRight = "";
-    document.body.style.width = "";
-    document.body.style.maxWidth = "";
   }
 
   private clearDockClasses(): void {

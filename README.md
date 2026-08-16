@@ -1,11 +1,11 @@
-# ⌨️ TypeRacer Stats V2 (v2.3.0)
+# ⌨️ TypeRacer Stats V2 (v2.4.0)
 
 > **Production-Grade TypeRacer Analytics, Web Dashboard & Live Stats Overlay Extension**  
 > Built with Pure Vanilla TypeScript, Vite 6, Tailwind CSS v4, and Native API Proxying. Zero heavy UI frameworks.
 
 [![Live Demo on Vercel](https://img.shields.io/badge/Vercel_Deployment-Live_Demo-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://typeracer-stats.vercel.app)
 [![Live Demo on GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Live_Demo-222222?style=for-the-badge&logo=github&logoColor=white)](https://sirmastermind1379.github.io/typeracer-stats/)
-[![Release v2.3.0](https://img.shields.io/badge/Release-v2.3.0-800000?style=for-the-badge)](https://github.com/SirMasterMind1379/typeracer-stats/releases/tag/v2.3.0)
+[![Release v2.4.0](https://img.shields.io/badge/Release-v2.4.0-800000?style=for-the-badge)](https://github.com/SirMasterMind1379/typeracer-stats/releases/tag/v2.4.0)
 
 ---
 
@@ -16,23 +16,29 @@
 
 ---
 
-## 🧩 TypeRacer Stats Overlay Extension (v2.3.0)
+## 🧩 TypeRacer Stats Overlay Extension (v2.4.0)
 
 A lightweight, zero-framework Chrome Extension (Manifest V3) & Tampermonkey Userscript that provides an in-game live overlay on `play.typeracer.com`.
 
 ### 🌟 Key Extension Features:
-- **📊 Multiplayer Progression Sparkline**: Interactive SVG line chart of your last 10 races with linear regression trendlines (`▲ +X.X WPM` / `▼ -X.X WPM`), dynamic bounds, and direct pit result links.
-- **🔥 Daily 10-Race Streak & QOTD Tracker**: Real-time progress bar counting towards your 10 daily multiplayer races resetting at **00:00 UTC**, live countdown timer, and automatic Quote of the Day completion status.
+- **📊 Multiplayer Progression Sparkline**: Interactive SVG line chart of your last 10 multiplayer races with linear regression trendlines (`▲ +X.X WPM` / `▼ -X.X WPM`), dynamic bounds, and direct pit result links.
+- **🔥 Daily 10-Race Multiplayer Streak**: Progress bar counting towards your 10 daily multiplayer races resetting at **00:00 UTC (8:00 PM EDT)** with your `Best Today: XX.X WPM` score.
+- **🏆 Dedicated Quote of the Day (QOTD) Section**: Live status (`Completed ✓` / `Pending ❌`), **`Best QOTD: XX.X WPM`** tracking, and countdown timer to the UTC reset.
+- **🔄 Dual-Universe Race Syncing**: Concurrently queries `universe=play` and `universe=qotd` while safely merging with local memory so QOTD attempts and local scores are never wiped out.
+- **🖱️ Toolbar Icon Quick Launcher**: Clicking the extension icon in Chrome's toolbar instantly focuses an existing `play.typeracer.com` tab or launches a new tab.
+- **📡 Multi-Tab Real-Time Sync**: Synchronizes race completions and refreshes across all open TypeRacer tabs using `BroadcastChannel`.
 - **🔁 Live Quote Recognition & Performance Delta**: Pre-race recognition indicating first-time encounter vs repeat quotes with past best speed. Post-race delta pill (`🚀 +5.2 WPM vs previous attempt`).
-- **🪟 Smart Window Docking & Snapping**: Drag to left/right screen edges to snap into a side-docked layout with automatic **16px natural breathing gutters** and real-time site resizing (`--tr-dock-width`). Floating and docked window dimensions/positions are **saved independently**.
+- **🪟 Smart Window Docking & Snapping**: Drag to left/right screen edges to snap into a side-docked layout with automatic **16px natural breathing gutters** and **zero horizontal scrollbar**. Floating and docked window dimensions/positions are **saved independently**.
 - **🏎️ TypeRacer Wide Track Mode**: Expands racetrack containers across full available screen space without clipping under docked sidebars.
+- **🎨 Theme-Matching Scrollbars**: Injects scrollbar styling mapped to TypeRacer's active theme CSS variables.
 - **🧹 Site Cleaners & Optimizations**:
   - **Hide Premium Upsells & Ads** (protecting theme dialogs)
   - **Hide Social Links** inside the main race card
   - **Auto-Hide Top Navigation Bar** (reveals on hover)
   - **Hide Mouse Cursor While Typing**
   - **Block Racer Hover Popups During Race**
-- **⚡ Instant Cache Boot**: Renders user stats and streak data from `localStorage`/`IndexedDB` in `<1ms` on browser reload before async background syncing.
+- **⚡ Instant Cache Boot**: Renders user stats and streak data from `localStorage`/`IndexedDB` in `<1ms` on browser reload.
+- **🛡️ Extension Context Invalidation Protection**: Handles Chrome extension reloads and orphaned background timers gracefully.
 
 ### 📦 Extension Installation:
 1. Run `npm run build` to generate the extension bundle at `dist/extension`.
@@ -104,7 +110,7 @@ This repository includes a ready-to-deploy Vercel Serverless Function setup (`ap
 The repository includes an automated GitHub Actions workflow (`.github/workflows/deploy.yml`).
 
 1. Enable GitHub Pages in your repository settings: **Settings > Pages > Source: GitHub Actions**.
-2. Whenever you push to `main` or publish a version tag (e.g. `v2.3.0`), GitHub Actions automatically builds and deploys the static application using relative base paths (`base: './'`).
+2. Whenever you push to `main` or publish a version tag (e.g. `v2.4.0`), GitHub Actions automatically builds and deploys the static application using relative base paths (`base: './'`).
 
 ---
 
@@ -118,7 +124,7 @@ The repository includes an automated GitHub Actions workflow (`.github/workflows
 │   │   ├── core/           # QuoteStore, StreakTracker, Notifier, TypeRacerHook
 │   │   ├── overlay/        # OverlayUI, RecentRacesWidget, StreakWidget, QuoteHistoryWidget
 │   │   ├── styles/         # Pure Shadow DOM overlay stylesheet (overlay.css)
-│   │   ├── background.ts   # Manifest V3 Service Worker (CORS Proxy & Alarms)
+│   │   ├── background.ts   # Manifest V3 Service Worker (CORS Proxy, Alarms & Launcher)
 │   │   ├── content.ts      # Main Content Script & Dynamic Pure CSS Layout Injector
 │   │   └── types.ts        # Extension Interfaces & Date Formatter
 │   ├── manifest.json       # Chrome Manifest V3 declaration

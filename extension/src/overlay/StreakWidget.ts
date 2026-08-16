@@ -20,6 +20,7 @@ export class StreakWidget {
 
     const bestTodayText = info.bestWpmToday != null ? `Best Today: <strong>${info.bestWpmToday.toFixed(1)} WPM</strong>` : "Best Today: --";
     const bestQotdText = info.bestQotdToday != null ? `Best QOTD: <strong>${info.bestQotdToday.toFixed(1)} WPM</strong>` : "Best QOTD: --";
+    const remainingText = info.racesRemaining > 0 ? `${info.racesRemaining} more needed` : "Goal reached!";
 
     // If card already exists, update elements in place to prevent layout blink
     const streakValEl = this.container.querySelector(".tr-streak-val");
@@ -28,8 +29,9 @@ export class StreakWidget {
     const timerEl = this.container.querySelector(".tr-timer");
     const bestEl = this.container.querySelector("#tr-best-today-label");
     const bestQotdEl = this.container.querySelector("#tr-best-qotd-label");
+    const remainingEl = this.container.querySelector("#tr-remaining-label");
 
-    if (streakValEl && progressFillEl && badgeEl && timerEl && bestEl && bestQotdEl) {
+    if (streakValEl && progressFillEl && badgeEl && timerEl && bestEl && bestQotdEl && remainingEl) {
       streakValEl.className = valClass;
       streakValEl.textContent = `${info.racesDoneToday} / ${info.targetDaily}`;
       progressFillEl.className = fillClass;
@@ -39,6 +41,7 @@ export class StreakWidget {
       timerEl.textContent = info.formattedCountdown;
       bestEl.innerHTML = bestTodayText;
       bestQotdEl.innerHTML = bestQotdText;
+      remainingEl.textContent = remainingText;
       return;
     }
 
@@ -56,7 +59,7 @@ export class StreakWidget {
 
         <div class="tr-status-row" style="margin-top: 4px;">
           <span style="font-size: 11px; color: #fbbf24;" id="tr-best-today-label">${bestTodayText}</span>
-          <span style="font-size: 10px; color: #9ca3af;">${info.racesRemaining > 0 ? `${info.racesRemaining} more needed` : 'Goal reached!'}</span>
+          <span style="font-size: 10px; color: #9ca3af;" id="tr-remaining-label">${remainingText}</span>
         </div>
 
         <!-- 2. Quote of the Day (QOTD) Section -->

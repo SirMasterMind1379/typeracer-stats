@@ -289,15 +289,16 @@ export class TypeRacerHook {
             const now = Date.now();
 
             const isQotd =
-              window.location.href.includes("universe=qotd") ||
-              window.location.href.includes("qotd") ||
-              document.title.toLowerCase().includes("quote of the day") ||
-              (document.querySelector(".mainMenu, .gameView, div[class*='bg-card-background']")?.textContent?.toLowerCase().includes("quote of the day") ?? false);
+              window.location.search.includes("universe=qotd") ||
+              window.location.hash.includes("universe=qotd") ||
+              window.location.pathname.includes("qotd") ||
+              (document.querySelector(".gameStatusLabel, .room-title, .gameView h1, .gameView h2")?.textContent?.toLowerCase().includes("quote of the day") ?? false);
 
             const isPractice =
-              window.location.href.includes("universe=practice") ||
-              window.location.href.includes("practice") ||
-              document.title.toLowerCase().includes("practice");
+              window.location.search.includes("universe=practice") ||
+              window.location.hash.includes("universe=practice") ||
+              window.location.pathname.includes("practice") ||
+              (document.querySelector(".gameStatusLabel, .room-title, .gameView h1, .gameView h2")?.textContent?.toLowerCase().includes("practice") ?? false);
 
             const mode = isQotd ? "qotd" : isPractice ? "practice" : "multiplayer";
 

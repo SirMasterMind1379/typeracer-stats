@@ -19,11 +19,11 @@ export class StreakTracker {
     if (!username) return false;
 
     // 1. Extension messaging fallback (bypasses CORS via Service Worker)
-    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id && chrome.runtime.sendMessage) {
+    if (typeof chrome !== "undefined" && chrome.runtime?.id && chrome.runtime?.sendMessage) {
       try {
         const res: any = await new Promise((resolve) => {
           chrome.runtime.sendMessage({ type: "CHECK_QOTD", username }, (response) => {
-            if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) resolve(null);
+            if (typeof chrome !== "undefined" && chrome.runtime?.lastError) resolve(null);
             else resolve(response);
           });
         });
@@ -39,28 +39,32 @@ export class StreakTracker {
     if (typeof (window as any).GM_xmlhttpRequest === "function") {
       try {
         const todayStr = this.getTodayUTCDateString();
-        const jsonText: string = await new Promise((resolve, reject) => {
-          (window as any).GM_xmlhttpRequest({
-            method: "GET",
-            url: `https://data.typeracer.com/api/v2/competitions?universe=play&date=${todayStr}`,
-            onload: (res: any) => resolve(res.responseText),
-            onerror: (err: any) => reject(err),
-          });
-        });
-        const comps = JSON.parse(jsonText);
-        const compList = Array.isArray(comps) ? comps : [];
-        if (compList.length > 0 && compList[0].uid) {
-          const resText: string = await new Promise((resolve, reject) => {
+        for (const uni of ["play", "qotd"]) {
+          const jsonText: string = await new Promise((resolve, reject) => {
             (window as any).GM_xmlhttpRequest({
               method: "GET",
-              url: `https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`,
+              url: `https://data.typeracer.com/api/v2/competitions?universe=${uni}&date=${todayStr}`,
               onload: (res: any) => resolve(res.responseText),
               onerror: (err: any) => reject(err),
             });
           });
-          const results = JSON.parse(resText);
-          const list = Array.isArray(results) ? results : [];
-          return list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase());
+          const comps = JSON.parse(jsonText);
+          const compList = Array.isArray(comps) ? comps : [];
+          if (compList.length > 0 && compList[0].uid) {
+            const resText: string = await new Promise((resolve, reject) => {
+              (window as any).GM_xmlhttpRequest({
+                method: "GET",
+                url: `https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`,
+                onload: (res: any) => resolve(res.responseText),
+                onerror: (err: any) => reject(err),
+              });
+            });
+            const results = JSON.parse(resText);
+            const list = Array.isArray(results) ? results : [];
+            if (list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase())) {
+              return true;
+            }
+          }
         }
       } catch {
         // ignore
@@ -70,16 +74,20 @@ export class StreakTracker {
     // 3. Direct fetch fallback (quietly catch page CORS blocks)
     try {
       const todayStr = this.getTodayUTCDateString();
-      const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=play&date=${todayStr}`);
-      if (compRes.ok) {
-        const comps = await compRes.json();
-        const compList = Array.isArray(comps) ? comps : [];
-        if (compList.length > 0 && compList[0].uid) {
-          const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`);
-          if (resRes.ok) {
-            const results = await resRes.json();
-            const list = Array.isArray(results) ? results : [];
-            return list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase());
+      for (const uni of ["play", "qotd"]) {
+        const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=${uni}&date=${todayStr}`);
+        if (compRes.ok) {
+          const comps = await compRes.json();
+          const compList = Array.isArray(comps) ? comps : [];
+          if (compList.length > 0 && compList[0].uid) {
+            const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`);
+            if (resRes.ok) {
+              const results = await resRes.json();
+              const list = Array.isArray(results) ? results : [];
+              if (list.some((r: any) => (r.username || r.u || "").toLowerCase() === username.toLowerCase())) {
+                return true;
+              }
+            }
           }
         }
       }
@@ -101,14 +109,24 @@ export class StreakTracker {
     // Multiplayer races ONLY for 10-race streak calculation
     const todayMultiplayerRaces = todayRaces.filter(isCompetitiveRace);
 
+    // QOTD races completed today
+    const todayQotdRaces = todayRaces.filter((r) => {
+      const m = (r.mode || "").toLowerCase();
+      return m.includes("qotd") || m.includes("quote") || m === "competition" || m === "daily";
+    });
+
     const racesDoneToday = todayMultiplayerRaces.length;
     const racesRemaining = Math.max(0, this.targetRaces - racesDoneToday);
 
-    const qotdDone = qotdDoneOverride || todayRaces.some((r) => r.mode?.toLowerCase().includes("qotd"));
+    const qotdDone = qotdDoneOverride || todayQotdRaces.length > 0;
 
-    // Calculate Best WPM Today across multiplayer races completed today
+    // Calculate Best Multiplayer WPM Today
     const wpmsToday = todayMultiplayerRaces.map((r) => r.wpm).filter((w) => typeof w === "number" && !isNaN(w) && w > 0);
     const bestWpmToday = wpmsToday.length > 0 ? Math.max(...wpmsToday) : null;
+
+    // Calculate Best QOTD WPM Today
+    const qotdWpmsToday = todayQotdRaces.map((r) => r.wpm).filter((w) => typeof w === "number" && !isNaN(w) && w > 0);
+    const bestQotdToday = qotdWpmsToday.length > 0 ? Math.max(...qotdWpmsToday) : null;
 
     const secondsUntilReset = this.getSecondsUntilReset();
     const formattedCountdown = formatCountdown(secondsUntilReset);
@@ -117,8 +135,9 @@ export class StreakTracker {
       racesDoneToday,
       racesRemaining,
       targetDaily: this.targetRaces,
-      qotdDone,
       bestWpmToday,
+      qotdDone,
+      bestQotdToday,
       secondsUntilReset,
       formattedCountdown,
     };

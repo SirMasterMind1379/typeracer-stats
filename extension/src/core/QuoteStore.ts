@@ -101,16 +101,29 @@ export class QuoteStore {
     }
 
     if (fetchedRaces.length > 0) {
-      this.recentRacesMemory = fetchedRaces;
+      const map = new Map<number | string, ExtensionRace>();
+      for (const r of fetchedRaces) {
+        map.set(r.id, r);
+      }
+      for (const r of this.recentRacesMemory) {
+        if (!map.has(r.id)) {
+          map.set(r.id, r);
+        }
+      }
+      const merged = Array.from(map.values());
+      merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      this.recentRacesMemory = merged.slice(0, 50);
+
       try {
-        localStorage.setItem("tr_overlay_recent_races", JSON.stringify(fetchedRaces.slice(0, 50)));
+        localStorage.setItem("tr_overlay_recent_races", JSON.stringify(this.recentRacesMemory));
       } catch {
         // ignore
       }
+
       for (const r of fetchedRaces) {
         await this.saveRace(r, username);
       }
-      return fetchedRaces;
+      return this.recentRacesMemory;
     }
 
     return [];

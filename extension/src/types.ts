@@ -25,8 +25,9 @@ export interface StreakInfo {
   racesDoneToday: number;
   racesRemaining: number;
   targetDaily: number;
-  qotdDone: boolean;
   bestWpmToday: number | null;
+  qotdDone: boolean;
+  bestQotdToday: number | null;
   secondsUntilReset: number;
   formattedCountdown: string;
 }

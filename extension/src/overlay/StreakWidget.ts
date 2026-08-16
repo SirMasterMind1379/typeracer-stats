@@ -19,6 +19,7 @@ export class StreakWidget {
       : `<span class="tr-badge pending">Pending ❌</span>`;
 
     const bestTodayText = info.bestWpmToday != null ? `Best Today: <strong>${info.bestWpmToday.toFixed(1)} WPM</strong>` : "Best Today: --";
+    const bestQotdText = info.bestQotdToday != null ? `Best QOTD: <strong>${info.bestQotdToday.toFixed(1)} WPM</strong>` : "Best QOTD: --";
 
     // If card already exists, update elements in place to prevent layout blink
     const streakValEl = this.container.querySelector(".tr-streak-val");
@@ -26,8 +27,9 @@ export class StreakWidget {
     const badgeEl = this.container.querySelector(".tr-badge");
     const timerEl = this.container.querySelector(".tr-timer");
     const bestEl = this.container.querySelector("#tr-best-today-label");
+    const bestQotdEl = this.container.querySelector("#tr-best-qotd-label");
 
-    if (streakValEl && progressFillEl && badgeEl && timerEl && bestEl) {
+    if (streakValEl && progressFillEl && badgeEl && timerEl && bestEl && bestQotdEl) {
       streakValEl.className = valClass;
       streakValEl.textContent = `${info.racesDoneToday} / ${info.targetDaily}`;
       progressFillEl.className = fillClass;
@@ -36,11 +38,13 @@ export class StreakWidget {
       badgeEl.textContent = info.qotdDone ? "Completed ✓" : "Pending ❌";
       timerEl.textContent = info.formattedCountdown;
       bestEl.innerHTML = bestTodayText;
+      bestQotdEl.innerHTML = bestQotdText;
       return;
     }
 
     this.container.innerHTML = `
       <div class="tr-card">
+        <!-- 1. Multiplayer 10-Race Daily Streak Section -->
         <div class="tr-streak-header">
           <span class="tr-card-title" style="margin-bottom: 0;">Daily 10-Race Streak</span>
           <span class="${valClass}">${info.racesDoneToday} / ${info.targetDaily}</span>
@@ -50,14 +54,20 @@ export class StreakWidget {
           <div class="${fillClass}" style="width: ${pct}%;"></div>
         </div>
 
+        <div class="tr-status-row" style="margin-top: 4px;">
+          <span style="font-size: 11px; color: #fbbf24;" id="tr-best-today-label">${bestTodayText}</span>
+          <span style="font-size: 10px; color: #9ca3af;">${info.racesRemaining > 0 ? `${info.racesRemaining} more needed` : 'Goal reached!'}</span>
+        </div>
+
+        <!-- 2. Quote of the Day (QOTD) Section -->
         <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: 8px; padding-top: 8px;">
           <div class="tr-status-row">
-            <span>Quote of the Day (QOTD)</span>
+            <span style="font-weight: 600;">Quote of the Day (QOTD)</span>
             ${qotdBadge}
           </div>
-          <div class="tr-status-row">
-            <span style="font-size: 11px; color: #fbbf24;" id="tr-best-today-label">${bestTodayText}</span>
-            <span class="tr-timer">${info.formattedCountdown}</span>
+          <div class="tr-status-row" style="margin-top: 4px;">
+            <span style="font-size: 11px; color: #38bdf8;" id="tr-best-qotd-label">${bestQotdText}</span>
+            <span class="tr-timer" title="Time until UTC reset">${info.formattedCountdown}</span>
           </div>
         </div>
       </div>

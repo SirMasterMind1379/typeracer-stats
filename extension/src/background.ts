@@ -72,15 +72,42 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 async function fetchRacesForUser(username: string): Promise<any[]> {
   if (!username) return [];
 
-  // 1. Try Primary JSON API first
+  const combinedRaces: any[] = [];
+
+  // 1. Fetch Primary Play Races and QOTD Universe Races concurrently
   try {
-    const apiRes = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`);
-    if (apiRes.ok) {
-      const json = await apiRes.json();
-      const rawList = Array.isArray(json) ? json : [];
-      if (rawList.length > 0) {
-        return rawList.map(parseApiRace);
+    const [playRes, qotdRes] = await Promise.all([
+      fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`),
+      fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=qotd&n=10`),
+    ]);
+
+    if (playRes.ok) {
+      const playJson = await playRes.json();
+      if (Array.isArray(playJson)) {
+        combinedRaces.push(...playJson.map(parseApiRace));
       }
+    }
+
+    if (qotdRes.ok) {
+      const qotdJson = await qotdRes.json();
+      if (Array.isArray(qotdJson)) {
+        for (const raw of qotdJson) {
+          const parsed = parseApiRace(raw);
+          parsed.mode = "qotd";
+          combinedRaces.push(parsed);
+        }
+      }
+    }
+
+    if (combinedRaces.length > 0) {
+      // Deduplicate by race ID and sort by timestamp descending
+      const uniqueMap = new Map<number | string, any>();
+      for (const r of combinedRaces) {
+        uniqueMap.set(r.id, r);
+      }
+      const list = Array.from(uniqueMap.values());
+      list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      return list;
     }
   } catch (err) {
     console.warn("[Background] Primary API fetch failed, trying pit scraper fallback:", err);
@@ -110,7 +137,10 @@ async function fetchRacesForUser(username: string): Promise<any[]> {
           const rank = rankMatch ? parseInt(rankMatch[1], 10) : 1;
           const nr = rankMatch ? parseInt(rankMatch[2], 10) : 5;
           const timestamp = dateMatch ? new Date(dateMatch[1]).getTime() : Date.now();
-          const mode = modeMatch ? modeMatch[1].trim() : "multiplayer";
+          let mode = modeMatch ? modeMatch[1].trim() : "multiplayer";
+          if (mode.toLowerCase().includes("quote") || mode.toLowerCase().includes("qotd")) {
+            mode = "qotd";
+          }
 
           scraped.push({
             id: numMatch ? parseInt(numMatch[1], 10) : timestamp,

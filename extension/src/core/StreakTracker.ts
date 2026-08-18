@@ -98,55 +98,62 @@ export class StreakTracker {
   }
 
   public calculateDayStreak(allRaces: ExtensionRace[]): number {
-    const dayCounts = new Map<string, number>();
+    if (!Array.isArray(allRaces) || allRaces.length === 0) return 0;
+    try {
+      const dayCounts = new Map<string, number>();
 
-    // Deduplicate races by id or (textId + wpm + timestamp)
-    const deduped: ExtensionRace[] = [];
-    for (const r of allRaces) {
-      if (!deduped.some((existing) => isSameRace(existing, r))) {
-        deduped.push(r);
+      // Deduplicate races by id or (textId + wpm + timestamp)
+      const deduped: ExtensionRace[] = [];
+      for (const r of allRaces) {
+        if (r && !deduped.some((existing) => isSameRace(existing, r))) {
+          deduped.push(r);
+        }
       }
-    }
 
-    // 1. Group competitive multiplayer races by UTC date (YYYY-MM-DD)
-    for (const r of deduped) {
-      if (!isCompetitiveRace(r)) continue;
-      const ts = typeof r.timestamp === "number" ? r.timestamp : 0;
-      if (!ts) continue;
-      const d = new Date(ts);
-      const dayKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-      dayCounts.set(dayKey, (dayCounts.get(dayKey) || 0) + 1);
-    }
+      // 1. Group competitive multiplayer races by UTC date (YYYY-MM-DD)
+      for (const r of deduped) {
+        if (!r || !isCompetitiveRace(r)) continue;
+        const ts = typeof r.timestamp === "number" ? r.timestamp : 0;
+        if (!ts || isNaN(ts)) continue;
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) continue;
+        const dayKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+        dayCounts.set(dayKey, (dayCounts.get(dayKey) || 0) + 1);
+      }
 
-    const now = new Date();
-    const todayKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+      const now = new Date();
+      const todayKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
 
-    let currentStreak = 0;
-    const todayCount = dayCounts.get(todayKey) || 0;
+      let currentStreak = 0;
+      const todayCount = dayCounts.get(todayKey) || 0;
 
-    // If today is completed (>= 10 races), start streak count from today
-    let checkDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    if (todayCount >= this.targetRaces) {
-      currentStreak++;
-      checkDate.setUTCDate(checkDate.getUTCDate() - 1);
-    } else {
-      // If today is in progress (< 10 races), start checking from yesterday so active streak is not lost
-      checkDate.setUTCDate(checkDate.getUTCDate() - 1);
-    }
-
-    // Step backwards day by day to count consecutive days with >= 10 multiplayer races
-    while (true) {
-      const key = `${checkDate.getUTCFullYear()}-${String(checkDate.getUTCMonth() + 1).padStart(2, "0")}-${String(checkDate.getUTCDate()).padStart(2, "0")}`;
-      const count = dayCounts.get(key) || 0;
-      if (count >= this.targetRaces) {
+      // If today is completed (>= 10 races), start streak count from today
+      let checkDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      if (todayCount >= this.targetRaces) {
         currentStreak++;
         checkDate.setUTCDate(checkDate.getUTCDate() - 1);
       } else {
-        break;
+        // If today is in progress (< 10 races), start checking from yesterday so active streak is not lost
+        checkDate.setUTCDate(checkDate.getUTCDate() - 1);
       }
-    }
 
-    return currentStreak;
+      // Step backwards day by day to count consecutive days with >= 10 multiplayer races (safely capped at 365 days)
+      for (let i = 0; i < 365; i++) {
+        const key = `${checkDate.getUTCFullYear()}-${String(checkDate.getUTCMonth() + 1).padStart(2, "0")}-${String(checkDate.getUTCDate()).padStart(2, "0")}`;
+        const count = dayCounts.get(key) || 0;
+        if (count >= this.targetRaces) {
+          currentStreak++;
+          checkDate.setUTCDate(checkDate.getUTCDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      return currentStreak;
+    } catch (err) {
+      console.warn("[StreakTracker] calculateDayStreak error:", err);
+      return 0;
+    }
   }
 
   public calculateStreakInfo(races: ExtensionRace[], qotdDoneOverride = false): StreakInfo {

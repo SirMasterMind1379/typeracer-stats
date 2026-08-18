@@ -153,15 +153,16 @@ class App {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 45000);
-      const body: Record<string, string> = { username };
+      const bodyFast: Record<string, any> = { username };
       if (key) {
-        body.apiKey = key;
-        body.apiUsername = username;
+        bodyFast.apiKey = key;
+        bodyFast.apiUsername = username;
+        bodyFast.limit = 50;
       }
       const res = await fetch("/api/user-stats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(bodyFast),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -197,6 +198,32 @@ class App {
       this.lastSubmitted = { username: username, apiKey: key };
       this.input = username;
       this.apiKey = key;
+      this.loading = false;
+      this.render();
+
+      if (key && filteredFresh.length >= 50) {
+        const bodyFull = { username, apiKey: key, apiUsername: username, limit: 1000 };
+        fetch("/api/user-stats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyFull),
+        })
+          .then(res => res.json())
+          .then(async resultFull => {
+            if (resultFull.error) return;
+            const fullFreshRaces = (resultFull.races || []).filter((r: Race) => r.speed != null && r.speed > 0);
+            const fullRaceMap = new Map<string, Race>();
+            for (const r of this.fullRaces) fullRaceMap.set(r.id, r);
+            for (const r of fullFreshRaces) fullRaceMap.set(r.id, r);
+            this.fullRaces = Array.from(fullRaceMap.values());
+            resultFull.races = this.fullRaces;
+            this.data = resultFull;
+            await saveCachedProfile(username, resultFull);
+            await saveCachedRaces(username, this.fullRaces);
+            this.render();
+          })
+          .catch(err => console.error("Background sync failed:", err));
+      }
     } catch (err: any) {
       if (!this.data) {
         if (err.name === "AbortError") {

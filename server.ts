@@ -197,10 +197,11 @@ Bun.serve({
           });
         }
 
+        const limit = body.limit || 1000;
         const [racerRes, statsRes, batch1Res, scrapeData] = await Promise.all([
           fetchFromTR(`/v1/racers/${username}?universe=play`, effectiveUsername, effectiveKey),
           fetchFromTR(`/v1/racers/${username}/stats?universe=play`, effectiveUsername, effectiveKey),
-          fetchFromTR(`/v1/racers/${username}/races?universe=play&n=1000`, effectiveUsername, effectiveKey),
+          fetchFromTR(`/v1/racers/${username}/races?universe=play&n=${limit}`, effectiveUsername, effectiveKey),
           scrapeProfile(username),
         ]);
 
@@ -231,7 +232,7 @@ Bun.serve({
 
         // Fetch latest races via API, then scrape remaining pages if API is capped at 1000
         let rawRaces: any[] = Array.isArray(batch1Res.data) ? batch1Res.data : [];
-        if (rawRaces.length >= 1000) {
+        if (rawRaces.length >= 1000 && limit >= 1000) {
           const oldestApiRace = rawRaces[rawRaces.length - 1];
           const oldestDate = oldestApiRace?.t ? new Date(typeof oldestApiRace.t === 'number' ? oldestApiRace.t * 1000 : oldestApiRace.t).toISOString() : undefined;
           const extraRaces = await scrapeHistoryPages(username, oldestDate);

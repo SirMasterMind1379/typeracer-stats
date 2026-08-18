@@ -68,13 +68,18 @@ export function isCompetitiveRace(r: ExtensionRace): boolean {
   return true;
 }
 
-export function isSameRace(a: ExtensionRace, b: ExtensionRace): boolean {
-  if (a.id === b.id) return true;
-  const timeDiff = Math.abs((a.timestamp || 0) - (b.timestamp || 0));
-  if (a.textId && b.textId && a.textId === b.textId && Math.abs(a.wpm - b.wpm) <= 0.2 && timeDiff < 45000) {
+export function isSameRace(a?: ExtensionRace | null, b?: ExtensionRace | null): boolean {
+  if (!a || !b) return false;
+  if (a.id != null && b.id != null && a.id === b.id) return true;
+  const aTime = typeof a.timestamp === "number" ? a.timestamp : 0;
+  const bTime = typeof b.timestamp === "number" ? b.timestamp : 0;
+  const timeDiff = Math.abs(aTime - bTime);
+  const aWpm = typeof a.wpm === "number" ? a.wpm : 0;
+  const bWpm = typeof b.wpm === "number" ? b.wpm : 0;
+  if (a.textId && b.textId && a.textId === b.textId && Math.abs(aWpm - bWpm) <= 0.5 && timeDiff < 45000) {
     return true;
   }
-  if (Math.abs(a.wpm - b.wpm) < 0.1 && timeDiff < 25000) {
+  if (aWpm > 0 && bWpm > 0 && Math.abs(aWpm - bWpm) < 0.2 && timeDiff < 25000) {
     return true;
   }
   return false;

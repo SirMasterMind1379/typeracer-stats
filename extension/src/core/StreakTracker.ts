@@ -1,5 +1,5 @@
 import type { ExtensionRace, StreakInfo } from "../types";
-import { isCompetitiveRace, getToday00UTC, formatCountdown } from "../types";
+import { isCompetitiveRace, isSameRace, getToday00UTC, formatCountdown } from "../types";
 
 export class StreakTracker {
   private targetRaces = 10;

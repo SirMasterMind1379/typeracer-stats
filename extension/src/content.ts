@@ -51,6 +51,7 @@ class TypeRacerOverlayApp {
   private async init(): Promise<void> {
     // 1. Mount Overlay UI inside ShadowDOM
     this.ui = new OverlayUI(overlayCss, (settings) => {
+      if (!this.ui) return;
       if (settings.notifyOneHourBefore) {
         this.notifier.requestPermission();
       }
@@ -543,9 +544,11 @@ class TypeRacerOverlayApp {
     if (this.activeUsername === newUsername) return;
     this.activeUsername = newUsername;
 
-    this.ui.updateUsernameTitle(newUsername);
-    this.ui.getSettings().username = newUsername;
-    this.ui.saveSettings();
+    if (this.ui) {
+      this.ui.updateUsernameTitle(newUsername);
+      this.ui.getSettings().username = newUsername;
+      this.ui.saveSettings();
+    }
     try {
       localStorage.setItem("tr_username", newUsername);
     } catch {}
@@ -559,17 +562,19 @@ class TypeRacerOverlayApp {
       this.refreshOverlayData();
     });
 
-    const apiKey = this.ui.getSettings().apiKey || "";
+    const apiKey = this.ui ? this.ui.getSettings().apiKey || "" : "";
     this.quoteStore.syncFromAPI(newUsername, apiKey).then(() => {
       this.refreshOverlayData();
     });
   }
 
   private async refreshOverlayData(highlightNew: boolean = false): Promise<void> {
+    if (!this.ui || !this.quoteStore || !this.streakTracker || !this.streakWidget || !this.recentRacesWidget) return;
+
     const races = await this.quoteStore.getRecentRaces(200);
 
     // If quote banner is displayed, validate it only pertains to latest race
-    if (races.length > 0) {
+    if (races.length > 0 && this.quoteHistoryWidget) {
       this.quoteHistoryWidget.validateAgainstLatestRace(races[0].id);
     }
 

@@ -15,8 +15,9 @@ export class TypeRacerHook {
   private observer: MutationObserver | null = null;
   private isRaceInProgress = false;
   private detectedUsername = "";
-  private lastHandledRaceId = "";
-  private lastHandledRaceTime = 0;
+  private lastHandledRaceId: string = "";
+  private lastHandledRaceTime: number = 0;
+  private lastHandledWpm: number = 0;
 
   constructor(events: TypeRacerHookEvents) {
     this.events = events;
@@ -146,9 +147,13 @@ export class TypeRacerHook {
     for (const item of raceList) {
       if (item && item.wpm != null && item.rid != null) {
         const raceId = Number(item.rid) || Date.now();
+        const raceWpm = Math.round(Number(item.wpm) * 10) / 10;
         if (this.lastHandledRaceId === String(raceId)) continue;
+        if (Date.now() - this.lastHandledRaceTime < 5000 && Math.abs(this.lastHandledWpm - raceWpm) < 0.1) continue;
+
         this.lastHandledRaceId = String(raceId);
         this.lastHandledRaceTime = Date.now();
+        this.lastHandledWpm = raceWpm;
         this.isRaceInProgress = false;
 
         const ts = item.t ? (typeof item.t === "number" && item.t < 1e12 ? item.t * 1000 : Number(item.t)) : Date.now();
@@ -280,10 +285,16 @@ export class TypeRacerHook {
           if (wpmMatch) {
             const wpm = parseFloat(wpmMatch[1]);
             const acc = accMatch ? parseFloat(accMatch[1]) : 100;
+            const roundedWpm = Math.round(wpm * 10) / 10;
+
+            if (Date.now() - this.lastHandledRaceTime < 5000 && Math.abs(this.lastHandledWpm - roundedWpm) < 0.1) {
+              return; // Already captured by API intercept
+            }
 
             this.isRaceInProgress = false;
             this.lastHandledRaceId = String(raceId);
             this.lastHandledRaceTime = Date.now();
+            this.lastHandledWpm = roundedWpm;
 
             const numId = typeof raceId === "number" ? raceId : parseInt(String(raceId).replace(/\D/g, ""), 10) || Date.now();
             const now = Date.now();

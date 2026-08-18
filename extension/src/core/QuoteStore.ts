@@ -1,10 +1,10 @@
 import type { ExtensionRace, QuoteHistoryRecord } from "../types";
-import { parseApiRace } from "../types";
+import { parseApiRace, isSameRace } from "../types";
 
-const DB_NAME = "typeracer_db";
-const DB_VERSION = 1;
-const STORE_RACES = "races";
-const STORE_QUOTES = "quotes_history";
+const DB_NAME = "typeracer_overlay_db";
+const DB_VERSION = 2;
+const STORE_RACES = "overlay_races";
+const STORE_QUOTES = "overlay_quotes";
 
 export class QuoteStore {
   private dbPromise: Promise<IDBDatabase> | null = null;
@@ -16,27 +16,28 @@ export class QuoteStore {
 
   private initDB(): Promise<IDBDatabase> {
     if (this.dbPromise) return this.dbPromise;
+
     this.dbPromise = new Promise((resolve, reject) => {
-      if (typeof indexedDB === "undefined") {
-        return reject(new Error("IndexedDB unavailable"));
-      }
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = () => {
-        const db = req.result;
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onupgradeneeded = (e: IDBVersionChangeEvent) => {
+        const db = request.result;
         if (!db.objectStoreNames.contains(STORE_RACES)) {
-          const store = db.createObjectStore(STORE_RACES, { keyPath: "id" });
-          store.createIndex("username", "username", { unique: false });
-          store.createIndex("timestamp", "timestamp", { unique: false });
-          store.createIndex("textId", "textId", { unique: false });
+          const raceStore = db.createObjectStore(STORE_RACES, { keyPath: "id" });
+          raceStore.createIndex("textId", "textId", { unique: false });
+          raceStore.createIndex("timestamp", "timestamp", { unique: false });
+          raceStore.createIndex("username", "username", { unique: false });
         }
         if (!db.objectStoreNames.contains(STORE_QUOTES)) {
-          const store = db.createObjectStore(STORE_QUOTES, { keyPath: "textId" });
-          store.createIndex("quoteText", "quoteText", { unique: false });
+          const quoteStore = db.createObjectStore(STORE_QUOTES, { keyPath: "textId" });
+          quoteStore.createIndex("textId", "textId", { unique: true });
         }
       };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
     });
+
     return this.dbPromise;
   }
 
@@ -45,12 +46,12 @@ export class QuoteStore {
 
     let fetchedRaces: ExtensionRace[] = [];
 
-    // 1. Chrome Extension Background Messaging (Bypasses CORS via Service Worker)
-    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id && chrome.runtime.sendMessage) {
+    // 1. Extension Service Worker Messaging Fallback (Bypasses CORS)
+    if (typeof chrome !== "undefined" && chrome.runtime?.id && chrome.runtime?.sendMessage) {
       try {
         const res: any = await new Promise((resolve) => {
           chrome.runtime.sendMessage({ type: "FETCH_RACES", username }, (response) => {
-            if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
+            if (typeof chrome !== "undefined" && chrome.runtime?.lastError) {
               resolve(null);
             } else {
               resolve(response);
@@ -101,18 +102,14 @@ export class QuoteStore {
     }
 
     if (fetchedRaces.length > 0) {
-      const map = new Map<number | string, ExtensionRace>();
-      for (const r of fetchedRaces) {
-        map.set(r.id, r);
-      }
+      const mergedList: ExtensionRace[] = [...fetchedRaces];
       for (const r of this.recentRacesMemory) {
-        if (!map.has(r.id)) {
-          map.set(r.id, r);
+        if (!mergedList.some((m) => isSameRace(m, r))) {
+          mergedList.push(r);
         }
       }
-      const merged = Array.from(map.values());
-      merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      this.recentRacesMemory = merged.slice(0, 50);
+      mergedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      this.recentRacesMemory = mergedList.slice(0, 50);
 
       try {
         localStorage.setItem("tr_overlay_recent_races", JSON.stringify(this.recentRacesMemory));
@@ -130,9 +127,9 @@ export class QuoteStore {
   }
 
   public async saveRace(race: ExtensionRace, username: string = "local_user"): Promise<void> {
-    const existingIndex = this.recentRacesMemory.findIndex((r) => r.id === race.id);
+    const existingIndex = this.recentRacesMemory.findIndex((r) => isSameRace(r, race));
     if (existingIndex >= 0) {
-      this.recentRacesMemory[existingIndex] = race;
+      this.recentRacesMemory[existingIndex] = { ...this.recentRacesMemory[existingIndex], ...race };
     } else {
       this.recentRacesMemory.unshift(race);
       if (this.recentRacesMemory.length > 50) {

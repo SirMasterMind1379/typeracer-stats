@@ -116,7 +116,7 @@ export function renderChart(props: ChartProps): HTMLElement {
       : `<polyline pathLength="1" class="animate-line-draw" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${linePoints}" />`
     }
 
-    ${regPoints ? `<polyline pathLength="1" class="animate-line-draw" fill="none" stroke="${regressionColor}" stroke-width="2" stroke-dasharray="4 4" points="${regPoints}" />` : ""}
+    ${regPoints ? `<polyline fill="none" stroke="${regressionColor}" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" points="${regPoints}" />` : ""}
 
     <!-- Mutable overlay group for drag selection -->
     <g id="zoom-overlay"></g>

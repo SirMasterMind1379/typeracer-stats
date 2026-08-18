@@ -442,6 +442,19 @@
   margin-bottom: 6px;
 }
 
+.tr-day-streak-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .tr-streak-val {
   font-weight: 700;
   color: #ef4444;

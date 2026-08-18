@@ -28,6 +28,7 @@ export interface StreakInfo {
   bestWpmToday: number | null;
   qotdDone: boolean;
   bestQotdToday: number | null;
+  currentDayStreak: number;
   secondsUntilReset: number;
   formattedCountdown: string;
 }
@@ -57,11 +58,26 @@ export interface OverlaySettings {
 export function isCompetitiveRace(r: ExtensionRace): boolean {
   if (r.mode) {
     const m = r.mode.toLowerCase();
-    if (m.includes("qotd") || m.includes("practice") || m.includes("solo") || m.includes("quote")) {
+    if (m.includes("qotd") || m.includes("practice") || m.includes("solo") || m.includes("quote") || m === "competition" || m === "daily") {
       return false;
     }
   }
+  if (r.racers !== undefined && r.racers <= 1) {
+    return false;
+  }
   return true;
+}
+
+export function isSameRace(a: ExtensionRace, b: ExtensionRace): boolean {
+  if (a.id === b.id) return true;
+  const timeDiff = Math.abs((a.timestamp || 0) - (b.timestamp || 0));
+  if (a.textId && b.textId && a.textId === b.textId && Math.abs(a.wpm - b.wpm) <= 0.2 && timeDiff < 45000) {
+    return true;
+  }
+  if (Math.abs(a.wpm - b.wpm) < 0.1 && timeDiff < 25000) {
+    return true;
+  }
+  return false;
 }
 
 export function getToday00UTC(): number {

@@ -21,6 +21,7 @@ export class StreakWidget {
     const bestTodayText = info.bestWpmToday != null ? `Best Today: <strong>${info.bestWpmToday.toFixed(1)} WPM</strong>` : "Best Today: --";
     const bestQotdText = info.bestQotdToday != null ? `Best QOTD: <strong>${info.bestQotdToday.toFixed(1)} WPM</strong>` : "Best QOTD: --";
     const remainingText = info.racesRemaining > 0 ? `${info.racesRemaining} more needed` : "Goal reached!";
+    const dayStreakText = `🔥 ${info.currentDayStreak}d streak`;
 
     // If card already exists, update elements in place to prevent layout blink
     const streakValEl = this.container.querySelector(".tr-streak-val");
@@ -30,8 +31,9 @@ export class StreakWidget {
     const bestEl = this.container.querySelector("#tr-best-today-label");
     const bestQotdEl = this.container.querySelector("#tr-best-qotd-label");
     const remainingEl = this.container.querySelector("#tr-remaining-label");
+    const dayStreakEl = this.container.querySelector("#tr-day-streak-badge");
 
-    if (streakValEl && progressFillEl && badgeEl && timerEl && bestEl && bestQotdEl && remainingEl) {
+    if (streakValEl && progressFillEl && badgeEl && timerEl && bestEl && bestQotdEl && remainingEl && dayStreakEl) {
       streakValEl.className = valClass;
       streakValEl.textContent = `${info.racesDoneToday} / ${info.targetDaily}`;
       progressFillEl.className = fillClass;
@@ -42,6 +44,7 @@ export class StreakWidget {
       bestEl.innerHTML = bestTodayText;
       bestQotdEl.innerHTML = bestQotdText;
       remainingEl.textContent = remainingText;
+      dayStreakEl.textContent = dayStreakText;
       return;
     }
 
@@ -49,7 +52,10 @@ export class StreakWidget {
       <div class="tr-card">
         <!-- 1. Multiplayer 10-Race Daily Streak Section -->
         <div class="tr-streak-header">
-          <span class="tr-card-title" style="margin-bottom: 0;">Daily 10-Race Streak</span>
+          <span class="tr-card-title" style="margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+            Daily 10-Race Streak
+            <span class="tr-day-streak-badge" id="tr-day-streak-badge" title="Consecutive days with 10+ completed multiplayer races">${dayStreakText}</span>
+          </span>
           <span class="${valClass}">${info.racesDoneToday} / ${info.targetDaily}</span>
         </div>
 

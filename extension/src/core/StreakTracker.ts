@@ -97,11 +97,71 @@ export class StreakTracker {
     return false;
   }
 
+  public calculateDayStreak(allRaces: ExtensionRace[]): number {
+    const dayCounts = new Map<string, number>();
+
+    // Deduplicate races by id or (textId + wpm + timestamp)
+    const deduped: ExtensionRace[] = [];
+    for (const r of allRaces) {
+      if (!deduped.some((existing) => isSameRace(existing, r))) {
+        deduped.push(r);
+      }
+    }
+
+    // 1. Group competitive multiplayer races by UTC date (YYYY-MM-DD)
+    for (const r of deduped) {
+      if (!isCompetitiveRace(r)) continue;
+      const ts = typeof r.timestamp === "number" ? r.timestamp : 0;
+      if (!ts) continue;
+      const d = new Date(ts);
+      const dayKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+      dayCounts.set(dayKey, (dayCounts.get(dayKey) || 0) + 1);
+    }
+
+    const now = new Date();
+    const todayKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+
+    let currentStreak = 0;
+    const todayCount = dayCounts.get(todayKey) || 0;
+
+    // If today is completed (>= 10 races), start streak count from today
+    let checkDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    if (todayCount >= this.targetRaces) {
+      currentStreak++;
+      checkDate.setUTCDate(checkDate.getUTCDate() - 1);
+    } else {
+      // If today is in progress (< 10 races), start checking from yesterday so active streak is not lost
+      checkDate.setUTCDate(checkDate.getUTCDate() - 1);
+    }
+
+    // Step backwards day by day to count consecutive days with >= 10 multiplayer races
+    while (true) {
+      const key = `${checkDate.getUTCFullYear()}-${String(checkDate.getUTCMonth() + 1).padStart(2, "0")}-${String(checkDate.getUTCDate()).padStart(2, "0")}`;
+      const count = dayCounts.get(key) || 0;
+      if (count >= this.targetRaces) {
+        currentStreak++;
+        checkDate.setUTCDate(checkDate.getUTCDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    return currentStreak;
+  }
+
   public calculateStreakInfo(races: ExtensionRace[], qotdDoneOverride = false): StreakInfo {
     const today00UTC = getToday00UTC();
 
+    // Deduplicate races before calculation to prevent race doubling
+    const deduped: ExtensionRace[] = [];
+    for (const r of races) {
+      if (!deduped.some((existing) => isSameRace(existing, r))) {
+        deduped.push(r);
+      }
+    }
+
     // Filter races completed today in UTC (since 00:00 UTC / 8:00 PM EDT)
-    const todayRaces = races.filter((r) => {
+    const todayRaces = deduped.filter((r) => {
       const ts = typeof r.timestamp === "number" ? r.timestamp : 0;
       return ts >= today00UTC;
     });
@@ -128,6 +188,8 @@ export class StreakTracker {
     const qotdWpmsToday = todayQotdRaces.map((r) => r.wpm).filter((w) => typeof w === "number" && !isNaN(w) && w > 0);
     const bestQotdToday = qotdWpmsToday.length > 0 ? Math.max(...qotdWpmsToday) : null;
 
+    const currentDayStreak = this.calculateDayStreak(races);
+
     const secondsUntilReset = this.getSecondsUntilReset();
     const formattedCountdown = formatCountdown(secondsUntilReset);
 
@@ -138,6 +200,7 @@ export class StreakTracker {
       bestWpmToday,
       qotdDone,
       bestQotdToday,
+      currentDayStreak,
       secondsUntilReset,
       formattedCountdown,
     };

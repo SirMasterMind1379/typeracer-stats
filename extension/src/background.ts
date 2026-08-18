@@ -53,14 +53,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "FETCH_RACES") {
-    fetchRacesForUser(message.username)
+    fetchRacesForUser(message.username, message.apiKey)
       .then((races) => sendResponse({ success: true, races }))
       .catch((err) => sendResponse({ success: false, error: err.message }));
     return true; // Keep message channel open for async response
   }
 
   if (message.type === "CHECK_QOTD") {
-    checkQOTDForUser(message.username)
+    checkQOTDForUser(message.username, message.apiKey)
       .then((qotdDone) => sendResponse({ success: true, qotdDone }))
       .catch((err) => sendResponse({ success: false, error: err.message }));
     return true; // Keep message channel open for async response
@@ -69,16 +69,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
-async function fetchRacesForUser(username: string): Promise<any[]> {
+async function fetchRacesForUser(username: string, apiKey?: string): Promise<any[]> {
   if (!username) return [];
+
+  const headers: Record<string, string> = {};
+  if (apiKey) {
+    headers["Authorization"] = `Basic ${btoa(`${username}:${apiKey}`)}`;
+  }
 
   const combinedRaces: any[] = [];
 
   // 1. Fetch Primary Play Races and QOTD Universe Races concurrently
   try {
     const [playRes, qotdRes] = await Promise.all([
-      fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`),
-      fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=qotd&n=10`),
+      fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=100`, { headers }),
+      fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=qotd&n=20`, { headers }),
     ]);
 
     if (playRes.ok) {
@@ -165,16 +170,21 @@ async function fetchRacesForUser(username: string): Promise<any[]> {
   return [];
 }
 
-async function checkQOTDForUser(username: string): Promise<boolean> {
+async function checkQOTDForUser(username: string, apiKey?: string): Promise<boolean> {
   if (!username) return false;
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
     const now = new Date();
     const today00UTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
+    const headers: Record<string, string> = {};
+    if (apiKey) {
+      headers["Authorization"] = `Basic ${btoa(`${username}:${apiKey}`)}`;
+    }
+
     // 1. Check QOTD API Races for today in universe=qotd
     try {
-      const qotdApiRes = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=qotd&n=5`);
+      const qotdApiRes = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=qotd&n=10`, { headers });
       if (qotdApiRes.ok) {
         const qRaces = await qotdApiRes.json();
         if (Array.isArray(qRaces) && qRaces.length > 0) {
@@ -191,12 +201,12 @@ async function checkQOTDForUser(username: string): Promise<boolean> {
     // 2. Check API Competitions for universe=play and universe=qotd
     for (const uni of ["play", "qotd"]) {
       try {
-        const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=${uni}&date=${todayStr}`);
+        const compRes = await fetch(`https://data.typeracer.com/api/v2/competitions?universe=${uni}&date=${todayStr}`, { headers });
         if (compRes.ok) {
           const comps = await compRes.json();
           const compList = Array.isArray(comps) ? comps : [];
           if (compList.length > 0 && compList[0].uid) {
-            const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`);
+            const resRes = await fetch(`https://data.typeracer.com/api/v2/competitions/results?uid=${compList[0].uid}`, { headers });
             if (resRes.ok) {
               const results = await resRes.json();
               const list = Array.isArray(results) ? results : [];
@@ -235,7 +245,7 @@ async function checkQOTDForUser(username: string): Promise<boolean> {
     }
 
     // 4. Check fetched general user races for QOTD today
-    const userRaces = await fetchRacesForUser(username);
+    const userRaces = await fetchRacesForUser(username, apiKey);
     if (userRaces.some((r) => r.timestamp >= today00UTC && r.mode?.toLowerCase().includes("qotd"))) {
       return true;
     }

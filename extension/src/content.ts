@@ -71,8 +71,9 @@ class TypeRacerOverlayApp {
     // 2. Wire Manual Refresh/Reload Button Handler
     this.ui.setOnRefresh(async () => {
       const user = this.activeUsername || this.ui.getSettings().username || localStorage.getItem("tr_username") || "";
+      const apiKey = this.ui.getSettings().apiKey || "";
       if (user) {
-        await this.quoteStore.syncFromAPI(user);
+        await this.quoteStore.syncFromAPI(user, apiKey);
         this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(user);
       }
       await this.refreshOverlayData(true);
@@ -118,6 +119,7 @@ class TypeRacerOverlayApp {
     } catch {}
     const domUsername = this.trHook.detectUsername();
     const effectiveUsername = domUsername || settingsUsername || cachedUsername || "";
+    const apiKey = this.ui.getSettings().apiKey || "";
 
     if (effectiveUsername) {
       this.activeUsername = effectiveUsername;
@@ -131,8 +133,8 @@ class TypeRacerOverlayApp {
       // 1. Immediately render cached data (instant on reload!)
       await this.refreshOverlayData();
 
-      // 2. Concurrently sync latest data from API
-      this.quoteStore.syncFromAPI(effectiveUsername).then(async () => {
+      // 2. Concurrently sync latest data from API with API Key authentication
+      this.quoteStore.syncFromAPI(effectiveUsername, apiKey).then(async () => {
         this.isQotdDoneFromApi = await this.streakTracker.checkQOTDFromAPI(effectiveUsername);
         await this.refreshOverlayData();
       });
@@ -557,7 +559,8 @@ class TypeRacerOverlayApp {
       this.refreshOverlayData();
     });
 
-    this.quoteStore.syncFromAPI(newUsername).then(() => {
+    const apiKey = this.ui.getSettings().apiKey || "";
+    this.quoteStore.syncFromAPI(newUsername, apiKey).then(() => {
       this.refreshOverlayData();
     });
   }
@@ -671,10 +674,11 @@ class TypeRacerOverlayApp {
       this.broadcastChannel.postMessage({ type: "RACE_COMPLETED", race });
     }
 
-    // 6. Sync from API in background to ensure 100% server sync
+    // 6. Sync from API in background to ensure 100% server sync with API key
     if (username && username !== "local_user") {
+      const apiKey = this.ui.getSettings().apiKey || "";
       setTimeout(() => {
-        this.quoteStore.syncFromAPI(username).then(() => {
+        this.quoteStore.syncFromAPI(username, apiKey).then(() => {
           this.refreshOverlayData();
         });
       }, 800);

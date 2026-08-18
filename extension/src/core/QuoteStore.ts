@@ -41,7 +41,7 @@ export class QuoteStore {
     return this.dbPromise;
   }
 
-  public async syncFromAPI(username: string): Promise<ExtensionRace[]> {
+  public async syncFromAPI(username: string, apiKey?: string): Promise<ExtensionRace[]> {
     if (!username) return [];
 
     let fetchedRaces: ExtensionRace[] = [];
@@ -50,7 +50,7 @@ export class QuoteStore {
     if (typeof chrome !== "undefined" && chrome.runtime?.id && chrome.runtime?.sendMessage) {
       try {
         const res: any = await new Promise((resolve) => {
-          chrome.runtime.sendMessage({ type: "FETCH_RACES", username }, (response) => {
+          chrome.runtime.sendMessage({ type: "FETCH_RACES", username, apiKey }, (response) => {
             if (typeof chrome !== "undefined" && chrome.runtime?.lastError) {
               resolve(null);
             } else {
@@ -70,10 +70,15 @@ export class QuoteStore {
     // 2. Tampermonkey GM_xmlhttpRequest Fallback (Bypasses CORS for Userscript)
     if (fetchedRaces.length === 0 && typeof (window as any).GM_xmlhttpRequest === "function") {
       try {
+        const headers: Record<string, string> = {};
+        if (apiKey) {
+          headers["Authorization"] = `Basic ${btoa(`${username}:${apiKey}`)}`;
+        }
         const jsonText: string = await new Promise((resolve, reject) => {
           (window as any).GM_xmlhttpRequest({
             method: "GET",
-            url: `https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`,
+            url: `https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=100`,
+            headers,
             onload: (res: any) => resolve(res.responseText),
             onerror: (err: any) => reject(err),
           });
@@ -90,7 +95,11 @@ export class QuoteStore {
     // 3. Direct fetch fallback
     if (fetchedRaces.length === 0) {
       try {
-        const res = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=50`);
+        const headers: Record<string, string> = {};
+        if (apiKey) {
+          headers["Authorization"] = `Basic ${btoa(`${username}:${apiKey}`)}`;
+        }
+        const res = await fetch(`https://data.typeracer.com/api/v1/racers/${encodeURIComponent(username)}/races?universe=play&n=100`, { headers });
         if (res.ok) {
           const json = await res.json();
           const rawRaces = Array.isArray(json) ? json : [];
